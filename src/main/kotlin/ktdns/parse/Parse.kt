@@ -81,7 +81,6 @@ class Parse {
         header.RA = RA
         header.Z = Z
         header.RCODE = RCODE
-        header.counts = counts
         header.QDCOUNT = QDCOUNT
         header.ANCOUNT = ANCOUNT
         header.NSCOUNT = NSCOUNT
@@ -198,7 +197,7 @@ class Parse {
         return message
     }
 
-    fun generateAnswer(message: Message, vararg answers: Message.Answer): Message {
+    fun generateAnswer(message: Message, answers: Message.Answer): Message {
         /**
         0  1  2  3  4  5  6  7  0  1  2  3  4  5  6  7
         +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
@@ -229,6 +228,9 @@ class Parse {
         ## RDATA 不定长字符串来表示记录，格式根TYPE和CLASS有关。比如，TYPE是A，CLASS 是 IN，那么RDATA就是一个4个字节的ARPA网络地址
          */
 
-        message.header.FLAGS
+        message.setAnswerMessage(true)
+        message.header.ANCOUNT++
+
+
     }
 }
