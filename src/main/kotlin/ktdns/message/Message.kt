@@ -115,13 +115,11 @@ class Message {
         ## QCLASS 无符号16bit整数表示查询的类,比如，IN代表Internet
          */
 
-        var QNAME = ""
+        lateinit var QNAME: String
         var QTYPE = -1
         var QCLASS = -1
         val QNAMEByteArray: ByteArray
             get() {
-                check(QNAME != "")
-
                 val list = QNAME.substring(0 until QNAME.length - 1).split('.')
                 val arrayList = ArrayList<Byte>()
 
@@ -160,5 +158,37 @@ class Message {
             }
     }
 
-    class Answer
+    class Answer {
+        /**
+        0  1  2  3  4  5  6  7  0  1  2  3  4  5  6  7
+        +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+        |                                               |
+        /                                               /
+        /                      NAME                     /
+        |                                               |
+        +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+        |                      TYPE                     |
+        +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+        |                     CLASS                     |
+        +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+        |                      TTL                      |
+        |                                               |
+        +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+        |                   RDLENGTH                    |
+        +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--|
+        /                     RDATA                     /
+        /                                               /
+        +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+
+        # Answer/Authority/Additional (这3个字段的格式都是一样的)
+        ## NAME 资源记录包含的域名
+        ## TYPE 表示DNS协议的类型
+        ## CLASS 表示RDATA的类
+        ## TTL 4字节无符号整数表示资源记录可以缓存的时间。0代表只能被传输，但是不能被缓存
+        ## RDLENGTH 2个字节无符号整数表示RDATA的长度
+        ## RDATA 不定长字符串来表示记录，格式根TYPE和CLASS有关。比如，TYPE是A，CLASS 是 IN，那么RDATA就是一个4个字节的ARPA网络地址
+         */
+
+
+    }
 }
