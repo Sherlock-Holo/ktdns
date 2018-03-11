@@ -1,7 +1,7 @@
-package ktdns.parse
+package ktdns.core.parse
 
 import ktdns.extend.toUInt
-import ktdns.message.Message
+import ktdns.core.message.Message
 import java.nio.ByteBuffer
 
 class Parse {

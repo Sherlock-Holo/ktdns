@@ -1,4 +1,4 @@
-package ktdns.parse
+package ktdns.core.parse
 
 import java.net.DatagramPacket
 import java.net.DatagramSocket

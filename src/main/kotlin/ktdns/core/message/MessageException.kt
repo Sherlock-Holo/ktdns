@@ -1,4 +1,4 @@
-package ktdns.message
+package ktdns.core.message
 
 import ktdns.KtdnsException
 
