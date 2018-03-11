@@ -8,6 +8,7 @@ class Parse {
     fun parseQuery(buf: ByteArray): Message {
         val message = Message()
 
+
         /**
         # Header
         ## ID: 2 bytes
@@ -30,6 +31,11 @@ class Parse {
         6-15: 未使用
         }
 
+        ## QDCOUNT: 无符号16bit整数表示报文请求段中的问题记录数
+        ## ANCOUNT: 无符号16bit整数表示报文回答段中的回答记录数
+        ## NSCOUNT: 无符号16bit整数表示报文授权段中的授权记录数
+        ## ARCOUNT: 无符号16bit整数表示报文附加段中的附加记录数
+
         0  1  2  3  4  5  6  7  0  1  2  3  4  5  6  7
         +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
         |                      ID                       |
@@ -46,6 +52,7 @@ class Parse {
         +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
          */
 
+
         val ID = buf.copyOfRange(0, 2)
         val FLAGS = buf.copyOfRange(2, 4)
         val QR = FLAGS[0].toUInt() and 0b10000000
@@ -57,10 +64,15 @@ class Parse {
         val Z = FLAGS[1].toUInt() and 0b01110000
         val RCODE = FLAGS[1].toUInt() and 0b00001111
 
+        val counts = ByteBuffer.wrap(buf.copyOfRange(4, 12))
+        val QDCOUNT = counts.short.toInt()
+        val ANCOUNT = counts.short.toInt()
+        val NSCOUNT = counts.short.toInt()
+        val ARCOUNT = counts.short.toInt()
+
         val header = message.header
 
         header.ID = ID
-        header.FLAGS = FLAGS
         header.QR = QR
         header.opcode = opcode
         header.AA = AA
@@ -69,6 +81,12 @@ class Parse {
         header.RA = RA
         header.Z = Z
         header.RCODE = RCODE
+        header.counts = counts
+        header.QDCOUNT = QDCOUNT
+        header.ANCOUNT = ANCOUNT
+        header.NSCOUNT = NSCOUNT
+        header.ARCOUNT = ARCOUNT
+
 
         /**
         0  1  2  3  4  5  6  7  0  1  2  3  4  5  6  7
@@ -88,11 +106,12 @@ class Parse {
         ## QCLASS 无符号16bit整数表示查询的类,比如，IN代表Internet
          */
 
+
         val noHeaderBuf = buf.copyOfRange(12, buf.size)
         val QNAMEBuilder = StringBuilder()
 
         var pos = 0
-        var length = noHeaderBuf[pos].toUInt()
+        /*var length = noHeaderBuf[pos].toUInt()
         var QNAMELength = 1 + length
         do {
 //            length = noHeaderBuf[pos].toUInt()
@@ -110,10 +129,41 @@ class Parse {
         val QTYPE = ByteBuffer.wrap(noHeaderBuf.copyOfRange(QNAMELength, QNAMELength + 2)).short.toInt()
         val QCLASS = ByteBuffer.wrap(noHeaderBuf.copyOfRange(QNAMELength + 2, QNAMELength + 4)).short.toInt()
 
-        val question = message.question
+        val question = Message.Question()
         question.QNAME = QNAME
         question.QTYPE = QTYPE
         question.QCLASS = QCLASS
+
+        message.questions.add(question)*/
+
+        for (i in 0 until QDCOUNT) {
+            var length = noHeaderBuf[pos].toUInt()
+            var QNAMELength = 1 + length
+            do {
+//            length = noHeaderBuf[pos].toUInt()
+                pos++
+                QNAMEBuilder.append(String(noHeaderBuf.copyOfRange(pos, pos + length)))
+                QNAMEBuilder.append('.')
+
+                pos += length
+                length = noHeaderBuf[pos].toUInt()
+
+                QNAMELength += 1 + length
+            } while (length != 0)
+
+            val QNAME = QNAMEBuilder.toString()
+            val QTYPE = ByteBuffer.wrap(noHeaderBuf.copyOfRange(QNAMELength, QNAMELength + 2)).short.toInt()
+            val QCLASS = ByteBuffer.wrap(noHeaderBuf.copyOfRange(QNAMELength + 2, QNAMELength + 4)).short.toInt()
+
+            val question = Message.Question()
+            question.QNAME = QNAME
+            question.QTYPE = QTYPE
+            question.QCLASS = QCLASS
+
+            message.questions.add(question)
+            pos = QNAMELength + 4
+        }
+
 
         /**
         0  1  2  3  4  5  6  7  0  1  2  3  4  5  6  7
@@ -146,5 +196,39 @@ class Parse {
          */
 
         return message
+    }
+
+    fun generateAnswer(message: Message, vararg answers: Message.Answer): Message {
+        /**
+        0  1  2  3  4  5  6  7  0  1  2  3  4  5  6  7
+        +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+        |                                               |
+        /                                               /
+        /                      NAME                     /
+        |                                               |
+        +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+        |                      TYPE                     |
+        +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+        |                     CLASS                     |
+        +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+        |                      TTL                      |
+        |                                               |
+        +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+        |                   RDLENGTH                    |
+        +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--|
+        /                     RDATA                     /
+        /                                               /
+        +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+
+        # Answer/Authority/Additional (这3个字段的格式都是一样的)
+        ## NAME 资源记录包含的域名
+        ## TYPE 表示DNS协议的类型
+        ## CLASS 表示RDATA的类
+        ## TTL 4字节无符号整数表示资源记录可以缓存的时间。0代表只能被传输，但是不能被缓存
+        ## RDLENGTH 2个字节无符号整数表示RDATA的长度
+        ## RDATA 不定长字符串来表示记录，格式根TYPE和CLASS有关。比如，TYPE是A，CLASS 是 IN，那么RDATA就是一个4个字节的ARPA网络地址
+         */
+
+        message.header.FLAGS
     }
 }

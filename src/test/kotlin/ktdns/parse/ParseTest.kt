@@ -11,5 +11,5 @@ fun main(args: Array<String>) {
 
     val parse = Parse()
     val message = parse.parseQuery(buf)
-    println(message.question.QTYPE!!)
+    println(message.questions[0].QNAME)
 }
