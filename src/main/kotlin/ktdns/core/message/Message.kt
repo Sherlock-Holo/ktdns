@@ -2,6 +2,7 @@ package ktdns.core.message
 
 import ktdns.extend.getIntByteArray
 import ktdns.extend.getShortByteArray
+import java.net.DatagramSocket
 import java.net.InetAddress
 import java.nio.ByteBuffer
 
@@ -12,6 +13,10 @@ class Message : Cloneable {
 
     val answers = ArrayList<Answer>()
     private var CNAMEPos = -1
+
+    lateinit var socket: DatagramSocket
+    lateinit var souceAddress: InetAddress
+    var sourcePort = -1
 
     val byteArray: ByteArray
         get() {
