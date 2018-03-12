@@ -10,6 +10,6 @@ fun main(args: Array<String>) {
     udpServer.receive(packet)
 
     val parse = Parse()
-    val message = parse.parseQuery(buf)
+    val message = parse.parseQuery(buf, udpServer, packet.address, packet.port)
     println(message.questions[0].QNAME)
 }

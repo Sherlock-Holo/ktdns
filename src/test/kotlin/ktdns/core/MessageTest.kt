@@ -14,7 +14,7 @@ fun main(args: Array<String>) {
         udpServer.receive(packet)
 
         val parse = Parse()
-        val message = parse.parseQuery(buf)
+        val message = parse.parseQuery(buf, udpServer, packet.address, packet.port)
 
         val outMessage = message.clone() as Message
         outMessage.setAnswerMessage(true)
