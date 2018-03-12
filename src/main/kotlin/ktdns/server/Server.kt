@@ -1,8 +1,8 @@
 package ktdns.server
 
-import ktdns.interceptor.Interceptor
 import ktdns.KtdnsException
 import ktdns.core.parse.Parse
+import ktdns.interceptor.Interceptor
 import ktdns.interceptor.chain.AbstractChain
 import ktdns.interceptor.chain.SimpleChain
 import java.io.IOException
@@ -53,7 +53,10 @@ class Server(private val chain: AbstractChain) {
 
                 val outPacket = DatagramPacket(outBuf, outBuf.size, message.souceAddress, message.sourcePort)
                 val socket = message.socket
-                socket.send(outPacket)
+                try {
+                    socket.send(outPacket)
+                } finally {
+                }
             }).start()
         }
     }

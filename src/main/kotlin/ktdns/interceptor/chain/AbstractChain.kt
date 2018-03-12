@@ -1,7 +1,7 @@
 package ktdns.interceptor.chain
 
-import ktdns.interceptor.Interceptor
 import ktdns.core.message.Message
+import ktdns.interceptor.Interceptor
 
 abstract class AbstractChain : Chain, Cloneable {
     abstract override var message: Message

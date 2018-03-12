@@ -1,7 +1,7 @@
 package ktdns.server
 
-import ktdns.interceptor.Interceptor
 import ktdns.core.message.Message
+import ktdns.interceptor.Interceptor
 import ktdns.interceptor.chain.Chain
 import java.net.InetAddress
 import java.net.InetSocketAddress
