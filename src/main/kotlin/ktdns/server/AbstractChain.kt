@@ -7,7 +7,7 @@ abstract class AbstractChain : Interceptor.Chain, Cloneable {
 
     abstract override fun addInterceptor(interceptor: Interceptor): Boolean
 
-    abstract override fun proceed(message: Message)
+    abstract override fun proceed(message: Message): Message
 
     public override fun clone(): Any {
         return super.clone()
