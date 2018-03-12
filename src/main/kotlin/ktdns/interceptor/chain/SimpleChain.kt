@@ -1,6 +1,8 @@
-package ktdns.server
+package ktdns.interceptor.chain
 
+import ktdns.interceptor.Interceptor
 import ktdns.core.message.Message
+import ktdns.interceptor.chain.AbstractChain
 import java.util.*
 
 class SimpleChain : AbstractChain() {

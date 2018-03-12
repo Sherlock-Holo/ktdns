@@ -1,8 +1,9 @@
-package ktdns.server
+package ktdns.interceptor.chain
 
+import ktdns.interceptor.Interceptor
 import ktdns.core.message.Message
 
-abstract class AbstractChain : Interceptor.Chain, Cloneable {
+abstract class AbstractChain : Chain, Cloneable {
     abstract override var message: Message
 
     abstract override fun addInterceptor(interceptor: Interceptor): Boolean
