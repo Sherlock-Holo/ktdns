@@ -11,6 +11,7 @@ fun main(args: Array<String>) {
     server
             .addInterceptor(CNAMEInterceptor())
             .addInterceptor(AInterceptor())
+            .addInterceptor(AAAAInterceptor())
     server.start()
 }
 
@@ -27,8 +28,16 @@ class CNAMEInterceptor : Interceptor {
 class AInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Message {
         val message = chain.message
-        message.addAnswer(Message.Companion.AAnswer("ipv6.qq.com", 1, 64, InetAddress.getByName("127.1.1.1")))
+        message.addAnswer(Message.Companion.AAnswer("ipv6.qq.com.", 1, 64, InetAddress.getByName("127.1.1.1")))
         message.setAnswerMessage(true)
+        return chain.proceed(message)
+    }
+}
+
+class AAAAInterceptor : Interceptor {
+    override fun intercept(chain: Interceptor.Chain): Message {
+        val message = chain.message
+        message.addAnswer(Message.Companion.AAAAAnswer("ipv6.qq.com.", 1, 64, InetAddress.getByName("::8")))
         return chain.proceed(message)
     }
 }
