@@ -31,20 +31,7 @@ class Message : Cloneable {
                 arrayList.addAll(it.byteArray.toTypedArray())
             }
 
-            /*if (answers.isEmpty()) return arrayList.toByteArray()
-            else {
-                if (CNAMEPos == -1) {
-                    answers.forEach { arrayList.addAll(it.toByteArray(12).toTypedArray()) }
-                } else {
-                    val cnameAnswer = answers.removeAt(CNAMEPos)
-                    arrayList.addAll(cnameAnswer.toByteArray(12).toTypedArray())
-
-                    val offset = arrayList.size - cnameAnswer.RDLENGTH
-
-                    answers.forEach { arrayList.addAll(it.toByteArray(offset).toTypedArray()) }
-                }
-            }*/
-
+            /** answers **/
             if (!answers.isEmpty()) {
                 if (CNAMEPos == -1) {
                     answers.forEach { arrayList.addAll(it.toByteArray(12).toTypedArray()) }

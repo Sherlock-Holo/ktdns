@@ -1,6 +1,5 @@
-package ktdns.core
+package ktdns.core.message
 
-import ktdns.core.message.Message
 import ktdns.core.parse.Parse
 import java.net.DatagramPacket
 import java.net.DatagramSocket
