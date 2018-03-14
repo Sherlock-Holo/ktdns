@@ -31,7 +31,6 @@ class AInterceptor : Interceptor {
     override fun intercept(chain: Chain): Message {
         val message = chain.message
         message.addAnswer(Message.Companion.AAnswer("ipv6.qq.com.", 1, 64, InetAddress.getByName("127.1.1.1")))
-        message.setAnswerMessage(true)
         return chain.proceed(message)
     }
 }

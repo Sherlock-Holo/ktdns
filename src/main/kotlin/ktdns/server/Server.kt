@@ -28,7 +28,7 @@ class Server(private val chain: AbstractChain) {
 
     private lateinit var socket: DatagramSocket
 
-    private val parse = Parse()
+    val parse = Parse()
 
     fun start() {
         if (interceptors.isEmpty()) {
@@ -49,7 +49,7 @@ class Server(private val chain: AbstractChain) {
                 val chain = this.chain.clone() as AbstractChain
                 interceptors.forEach { chain.addInterceptor(it) }
 
-                val outBuf = chain.proceed(message).byteArray
+                val outBuf = chain.proceed(message).apply { this.setAnswerMessage(true) }.byteArray
 
                 val outPacket = DatagramPacket(outBuf, outBuf.size, message.souceAddress, message.sourcePort)
                 val socket = message.socket
