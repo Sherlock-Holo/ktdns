@@ -9,12 +9,15 @@ import java.io.IOException
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetSocketAddress
+import java.util.concurrent.Executors
 
 class Server(private val chain: AbstractChain) {
 
     constructor() : this(SimpleChain())
 
     private val interceptors = ArrayList<Interceptor>()
+
+    private val threadPool = Executors.newCachedThreadPool()
 
     fun addInterceptor(interceptor: Interceptor): Server {
         interceptors.add(interceptor)
@@ -44,7 +47,7 @@ class Server(private val chain: AbstractChain) {
                 continue
             }
 
-            Thread(Runnable {
+            threadPool.submit {
                 val message = parse.parseQuery(buf, socket, packet.address, packet.port)
                 val chain = this.chain.clone() as AbstractChain
                 interceptors.forEach { chain.addInterceptor(it) }
@@ -57,7 +60,7 @@ class Server(private val chain: AbstractChain) {
                     socket.send(outPacket)
                 } finally {
                 }
-            }).start()
+            }
         }
     }
 }
