@@ -10,10 +10,10 @@ buildscript {
 }
 
 group 'SpiceAndWolf'
-version '0.1-alpha'
+version '0.1.2-alpha'
 
-//apply plugin: 'java'
-apply plugin: 'java-library'
+apply plugin: 'java'
+//apply plugin: 'java-library'
 apply plugin: 'kotlin'
 
 sourceCompatibility = 1.8
@@ -23,7 +23,7 @@ repositories {
 }
 
 dependencies {
-    api "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     testImplementation group: 'junit', name: 'junit', version: '4.12'
 }
 
