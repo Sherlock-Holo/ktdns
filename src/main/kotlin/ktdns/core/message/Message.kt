@@ -5,6 +5,7 @@ import ktdns.extend.getShortByteArray
 import java.net.DatagramSocket
 import java.net.InetAddress
 import java.nio.ByteBuffer
+import java.util.*
 
 class Message : Cloneable {
     var header = Header()
@@ -53,12 +54,26 @@ class Message : Cloneable {
     }
 
     fun addAnswer(answer: Answer): Message {
+        /*synchronized(answers) {
+            header.ANCOUNT++
+            answers.add(answer)
+            if (answer.TYPE == AnswerType.CNAME) {
+                CNAMEPos = answers.size - 1
+            }
+        }*/
+
         header.ANCOUNT++
         answers.add(answer)
         if (answer.TYPE == AnswerType.CNAME) {
             CNAMEPos = answers.size - 1
         }
 
+        return this
+    }
+
+    fun addQuestion(question: Question): Message {
+        header.QDCOUNT++
+        questions.add(question)
         return this
     }
 
@@ -322,6 +337,31 @@ class Message : Cloneable {
 
             override val RDLENGTH: Int
                 get() = RDATA.size
+        }
+
+        fun buildQuery(question: Question): Message {
+            val message = Message()
+            val header = message.header
+            val random = Random()
+
+            header.ID = ByteArray(2).apply { random.nextBytes(this) }
+
+            header.QR = 0
+            header.opcode = 0
+            header.AA = 0
+            header.TC = 0
+            header.RD = 1
+            header.RA = 0
+            header.Z = 0
+            header.RCODE = 0
+            header.QDCOUNT = 0
+            header.ANCOUNT = 0
+            header.NSCOUNT = 0
+            header.ARCOUNT = 0
+
+            message.addQuestion(question)
+
+            return message
         }
     }
 }
