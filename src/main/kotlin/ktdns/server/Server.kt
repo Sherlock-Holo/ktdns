@@ -39,7 +39,7 @@ class Server(private val chain: AbstractChain) {
         }
 
         while (true) {
-            val buf = ByteArray(512)
+            val buf = ByteArray(4096)
             val packet = DatagramPacket(buf, buf.size)
             try {
                 socket.receive(packet)

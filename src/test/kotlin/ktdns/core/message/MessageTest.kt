@@ -19,8 +19,8 @@ fun main(args: Array<String>) {
         outMessage.setAnswerMessage(true)
 //    outMessage.header.QR = 1
         outMessage
-                .addAnswer(Message.Companion.CNAMEAnswer("www.qq.com", 1, 64, "ipv6.qq.com."))
-                .addAnswer(Message.Companion.AAnswer("ipv6.qq.com", 1, 64, Inet4Address.getByName("14.17.32.211")))
+                .addAnswer(Record.CNAMEAnswer("www.qq.com", 1, 64, "ipv6.qq.com."))
+                .addAnswer(Record.AAnswer("ipv6.qq.com", 1, 64, Inet4Address.getByName("14.17.32.211")))
 
         val outByteArray = outMessage.byteArray
 

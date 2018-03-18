@@ -1,6 +1,7 @@
 package ktdns.core.parse
 
 import ktdns.core.message.Message
+import ktdns.core.message.Record
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
@@ -28,6 +29,6 @@ fun main(args: Array<String>) {
     val answer = parse.parseAnswer(answerBuf)
 
     answer.answers.forEach {
-        println(it.NAME + " " + it.TYPE + " " + if (it.TYPE == Message.Companion.AnswerType.CNAME) String(it.RDATA) else InetAddress.getByAddress(it.RDATA).hostAddress)
+        println(it.NAME + " " + it.TYPE + " " + if (it.TYPE == Record.RecordType.CNAME) String(it.RDATA) else InetAddress.getByAddress(it.RDATA).hostAddress)
     }
 }

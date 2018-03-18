@@ -1,6 +1,7 @@
 package ktdns.core.parse
 
 import ktdns.core.message.Message
+import ktdns.core.message.Record
 import ktdns.extend.BytesNumber
 import ktdns.extend.toUInt
 import java.net.DatagramSocket
@@ -131,17 +132,17 @@ class Parse {
             val answer = when (type) {
                 5 -> {
                     val cname = getName(newPos, buf).name
-                    Message.Companion.CNAMEAnswer(name, `class`, ttl, cname)
+                    Record.CNAMEAnswer(name, `class`, ttl, cname)
                 }
 
                 1 -> {
                     val address = InetAddress.getByAddress(buf.copyOfRange(newPos, newPos + 4))
-                    Message.Companion.AAnswer(name, `class`, ttl, address)
+                    Record.AAnswer(name, `class`, ttl, address)
                 }
 
                 28 -> {
                     val address = InetAddress.getByAddress(buf.copyOfRange(newPos, newPos + 16))
-                    Message.Companion.AAAAAnswer(name, `class`, ttl, address)
+                    Record.AAAAAnswer(name, `class`, ttl, address)
                 }
 
                 else -> TODO("other not implement answer type: $type")
