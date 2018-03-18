@@ -335,8 +335,7 @@ class Message : Cloneable {
                     return arrayList.toByteArray()
                 }
 
-            override val RDLENGTH: Int
-                get() = RDATA.size
+            override val RDLENGTH get() = RDATA.size
         }
 
         fun buildQuery(question: Question): Message {
