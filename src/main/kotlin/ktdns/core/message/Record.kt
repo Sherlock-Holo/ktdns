@@ -143,7 +143,7 @@ abstract class Record {
                                     if (i < 32 - sourceNetMask) sb.append('0')
                                     else sb.append('1')
                                 }
-                                ipByteArray[3] = Integer.getInteger(sb.toString(), 2).toByte()
+                                ipByteArray[3] = Integer.parseInt(sb.toString(), 2).toByte()
                             }
 
                             (32 - sourceNetMask) <= 16 -> {
