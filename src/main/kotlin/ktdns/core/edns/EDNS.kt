@@ -4,7 +4,7 @@ import java.net.HttpURLConnection
 import java.net.InetAddress
 import java.net.URL
 
-class Edns {
+class EDNS {
     companion object {
         var myIp: InetAddress? = null
             get() {
@@ -20,5 +20,6 @@ class Edns {
                     field
                 } else field
             }
+            private set
     }
 }
