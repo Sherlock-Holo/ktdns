@@ -1,10 +1,8 @@
 package ktdns.core.message
 
-import ktdns.extend.getIntByteArray
-import ktdns.extend.getShortByteArray
+import ktdns.KtdnsException
+import ktdns.extend.BytesNumber
 import java.net.InetAddress
-import java.nio.ByteBuffer
-import java.util.ArrayList
 
 abstract class Record {
     enum class RecordType(val type: Int) {
@@ -48,14 +46,13 @@ abstract class Record {
     abstract val TYPE: RecordType
     abstract val CLASS: Int
     abstract val TTL: Int
-    abstract val RDLENGTH: Int
+    open val RDLENGTH get() = RDATA.size
     abstract val RDATA: ByteArray
 
     open fun toByteArray(offset: Int?): ByteArray {
         val arrayList = ArrayList<Byte>()
-        val tmp = ByteBuffer.allocate(2)
         if (offset != null) {
-            arrayList.addAll(tmp.getShortByteArray((offset or 0b11000000_00000000).toShort()).toTypedArray())
+            arrayList.addAll(BytesNumber.getShortByteArray((offset or 0b11000000_00000000).toShort()).toTypedArray())
 
         } else {
             val list = NAME.substring(0, NAME.length - 1).split('.')
@@ -66,11 +63,10 @@ abstract class Record {
             arrayList.add(0.toByte())
         }
 
-        arrayList.addAll(tmp.getShortByteArray(TYPE.type.toShort()).toTypedArray())
-        arrayList.addAll(tmp.getShortByteArray(CLASS.toShort()).toTypedArray())
-        val ttl = ByteBuffer.allocate(4)
-        arrayList.addAll(ttl.getIntByteArray(TTL).toTypedArray())
-        arrayList.addAll(tmp.getShortByteArray(RDLENGTH.toShort()).toTypedArray())
+        arrayList.addAll(BytesNumber.getShortByteArray(TYPE.type.toShort()).toTypedArray())
+        arrayList.addAll(BytesNumber.getShortByteArray(CLASS.toShort()).toTypedArray())
+        arrayList.addAll(BytesNumber.getIntByteArray(TTL).toTypedArray())
+        arrayList.addAll(BytesNumber.getShortByteArray(RDLENGTH.toShort()).toTypedArray())
         arrayList.addAll(RDATA.toTypedArray())
 
         return arrayList.toByteArray()
@@ -123,5 +119,103 @@ abstract class Record {
             }
 
         override val RDLENGTH get() = RDATA.size
+    }
+
+    class EDNS_ECS(val ip: InetAddress, val sourceNetMask: Int, val scopeNetMask: Int) : Record() {
+        override val NAME = "0"
+        override val CLASS = 4096
+        override val TYPE = RecordType.EDNS
+
+        val realEDNSIP: InetAddress
+            get() {
+                val ipByteArray = ip.address
+                when (ipByteArray.size) {
+                    4 -> {
+                        val sb = StringBuilder()
+                        when {
+                            (32 - sourceNetMask) <= 8 -> {
+                                for (i in 0 until 8) {
+                                    if (i < 32 - sourceNetMask) sb.append('1')
+                                    else sb.append('0')
+                                }
+                                ipByteArray[3] = Integer.getInteger(sb.toString(), 2).toByte()
+                            }
+
+                            (32 - sourceNetMask) <= 16 -> {
+                                ipByteArray[3] = 0
+                                for (i in 0 until 8) {
+                                    if (i < 24 - sourceNetMask) sb.append('1')
+                                    else sb.append('0')
+                                }
+                                ipByteArray[2] = Integer.getInteger(sb.toString(), 2).toByte()
+                            }
+
+                            (32 - sourceNetMask) <= 24 -> {
+                                ipByteArray[3] = 0
+                                ipByteArray[2] = 0
+                                for (i in 0 until 8) {
+                                    if (i < 16 - sourceNetMask) sb.append('1')
+                                    else sb.append('0')
+                                }
+                                ipByteArray[1] = Integer.getInteger(sb.toString(), 2).toByte()
+                            }
+
+                            else -> {
+                                ipByteArray[3] = 0
+                                ipByteArray[2] = 0
+                                ipByteArray[1] = 0
+                                for (i in 0 until 8) {
+                                    if (i < 8 - sourceNetMask) sb.append('1')
+                                    else sb.append('0')
+                                }
+                                ipByteArray[0] = Integer.getInteger(sb.toString(), 2).toByte()
+                            }
+                        }
+                        return InetAddress.getByAddress(ipByteArray)
+                    }
+
+                    16 -> TODO("ipv6 mask")
+
+                    else -> throw KtdnsException("error address length: ${ipByteArray.size}")
+                }
+            }
+
+        override val TTL = 0
+
+        override val RDATA: ByteArray
+            get() {
+                val arrayList = ArrayList<Byte>()
+                arrayList.addAll(BytesNumber.getShortByteArray(8).toTypedArray())
+
+                val addressByteArray = realEDNSIP.address
+                val optionLength = 4 + addressByteArray.size
+                arrayList.addAll(BytesNumber.getShortByteArray(optionLength.toShort()).toTypedArray())
+
+                val family = when (addressByteArray.size) {
+                    4 -> 1
+                    16 -> 2
+                    else -> throw KtdnsException("error address length: ${addressByteArray.size}")
+                }
+                arrayList.addAll(BytesNumber.getShortByteArray(family.toShort()).toTypedArray())
+
+                arrayList.addAll(arrayListOf(sourceNetMask.toByte(), scopeNetMask.toByte()))
+
+                arrayList.addAll(addressByteArray.toTypedArray())
+
+                return arrayList.toByteArray()
+            }
+
+        override fun toByteArray(offset: Int?): ByteArray {
+            val arrayList = ArrayList<Byte>()
+            arrayList.add(0)
+
+            arrayList.addAll(BytesNumber.getShortByteArray(TYPE.type.toShort()).toTypedArray())
+            arrayList.addAll(BytesNumber.getShortByteArray(CLASS.toShort()).toTypedArray())
+            arrayList.addAll(BytesNumber.getIntByteArray(TTL).toTypedArray())
+            arrayList.addAll(BytesNumber.getShortByteArray(RDLENGTH.toShort()).toTypedArray())
+            arrayList.addAll(RDATA.toTypedArray())
+
+            return arrayList.toByteArray()
+        }
     }
 }
