@@ -13,6 +13,8 @@ class Message : Cloneable {
     val answers = ArrayList<Record>()
     private var CNAMEPos = -1
 
+    val additional = ArrayList<Record>()
+
     lateinit var socket: DatagramSocket
     lateinit var souceAddress: InetAddress
     var sourcePort = -1
@@ -64,6 +66,12 @@ class Message : Cloneable {
     fun addQuestion(question: Question): Message {
         header.QDCOUNT++
         questions.add(question)
+        return this
+    }
+
+    fun addAdditional(record: Record): Message {
+        header.ARCOUNT++
+        additional.add(record)
         return this
     }
 
