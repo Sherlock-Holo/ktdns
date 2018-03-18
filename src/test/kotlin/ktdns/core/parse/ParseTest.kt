@@ -1,6 +1,5 @@
 package ktdns.core.parse
 
-import ktdns.core.message.Message
 import ktdns.core.message.Record
 import java.net.DatagramPacket
 import java.net.DatagramSocket
@@ -16,11 +15,16 @@ fun main(args: Array<String>) {
     val parse = Parse()
     val message = parse.parseQuery(buf, udpServer, packet.address, packet.port)
 
+    message.addAdditional(Record.EDNS_ECS(InetAddress.getByName("128.0.0.1"), 24, 0, 4096).apply {
+        extended_RCODE = 0
+        EDNS_VERSION = 0
+    })
+
     val nameserver = DatagramSocket()
 
     nameserver.send(DatagramPacket(message.byteArray, message.byteArray.size, InetSocketAddress("127.0.0.1", 53)))
 
-    val answerBuf = ByteArray(512)
+    val answerBuf = ByteArray(4096)
 
     val answerPacket = DatagramPacket(answerBuf, answerBuf.size, InetSocketAddress("127.0.0.1", 53))
 

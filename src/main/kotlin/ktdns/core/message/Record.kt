@@ -121,9 +121,14 @@ abstract class Record {
         override val RDLENGTH get() = RDATA.size
     }
 
-    class EDNS_ECS(val ip: InetAddress, val sourceNetMask: Int, val scopeNetMask: Int) : Record() {
+    class EDNS_ECS(
+            val ip: InetAddress,
+            val sourceNetMask: Int,
+            var scopeNetMask: Int,
+            override val CLASS: Int
+    ) : Record() {
+
         override val NAME = "0"
-        override val CLASS = 4096
         override val TYPE = RecordType.EDNS
 
         val realEDNSIP: InetAddress
@@ -135,8 +140,8 @@ abstract class Record {
                         when {
                             (32 - sourceNetMask) <= 8 -> {
                                 for (i in 0 until 8) {
-                                    if (i < 32 - sourceNetMask) sb.append('1')
-                                    else sb.append('0')
+                                    if (i < 32 - sourceNetMask) sb.append('0')
+                                    else sb.append('1')
                                 }
                                 ipByteArray[3] = Integer.getInteger(sb.toString(), 2).toByte()
                             }
@@ -144,8 +149,8 @@ abstract class Record {
                             (32 - sourceNetMask) <= 16 -> {
                                 ipByteArray[3] = 0
                                 for (i in 0 until 8) {
-                                    if (i < 24 - sourceNetMask) sb.append('1')
-                                    else sb.append('0')
+                                    if (i < 24 - sourceNetMask) sb.append('0')
+                                    else sb.append('1')
                                 }
                                 ipByteArray[2] = Integer.getInteger(sb.toString(), 2).toByte()
                             }
@@ -154,8 +159,8 @@ abstract class Record {
                                 ipByteArray[3] = 0
                                 ipByteArray[2] = 0
                                 for (i in 0 until 8) {
-                                    if (i < 16 - sourceNetMask) sb.append('1')
-                                    else sb.append('0')
+                                    if (i < 16 - sourceNetMask) sb.append('0')
+                                    else sb.append('1')
                                 }
                                 ipByteArray[1] = Integer.getInteger(sb.toString(), 2).toByte()
                             }
@@ -180,7 +185,34 @@ abstract class Record {
                 }
             }
 
-        override val TTL = 0
+        var extended_RCODE = -1
+        var EDNS_VERSION = -1
+        var Z = ByteArray(2)
+
+        override val TTL: Int
+            get() {
+                val arrayList = ArrayList<Byte>()
+                arrayList.add(extended_RCODE.toByte())
+                arrayList.add(EDNS_VERSION.toByte())
+
+                arrayList.addAll(Z.toTypedArray())
+                return BytesNumber.getNumber(arrayList.toByteArray()) as Int
+            }
+
+        /**
+        +0 (MSB)                            +1 (LSB)
+        +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+        0: |                          OPTION-CODE                       |
+        +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+        2: |                         OPTION-LENGTH                      |
+        +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+        4: |                            FAMILY                          |
+        +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+        6: |     SOURCE PREFIX-LENGTH      |     SCOPE PREFIX-LENGTH    |
+        +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+        8: /                           ADDRESS...                       /
+        +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+         */
 
         override val RDATA: ByteArray
             get() {

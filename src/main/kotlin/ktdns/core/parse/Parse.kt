@@ -1,5 +1,6 @@
 package ktdns.core.parse
 
+import ktdns.KtdnsException
 import ktdns.core.message.Message
 import ktdns.core.message.Record
 import ktdns.extend.BytesNumber
@@ -43,6 +44,62 @@ class Parse {
         question.QCLASS = QCLASS
 
         message.questions.add(question)
+
+        var pos = QNAME.length + 5
+
+        loop@ for (i in 0 until message.header.ARCOUNT) {
+            pos++
+            val type = (BytesNumber.getNumber(noHeaderBuf.copyOfRange(pos, pos + 2)) as Short).toInt()
+            when (type) {
+                41 -> {
+                    pos += 2
+                    val CLASS = (BytesNumber.getNumber(noHeaderBuf.copyOfRange(pos, pos + 2)) as Short).toInt()
+                    pos += 2
+                    val EXTENDED_RCODE = noHeaderBuf[pos].toUInt()
+                    val EDNS_VERSION = noHeaderBuf[++pos].toInt()
+                    val Z = noHeaderBuf.copyOfRange(pos, pos + 2)
+
+                    pos += 2
+                    val RDLENGTH = BytesNumber.getNumber(noHeaderBuf.copyOfRange(pos, pos + 2)) as Int
+                    pos += 2
+
+                    if (RDLENGTH == 0) continue@loop
+
+                    val RDATA = noHeaderBuf.copyOfRange(pos, pos + RDLENGTH)
+
+//                val OPTION_CODE = (BytesNumber.getNumber(RDATA.copyOfRange(0, 2)) as Short).toInt()
+                    val OPTION_LENGTH = (BytesNumber.getNumber(RDATA.copyOfRange(2, 4)) as Short).toInt()
+                    val FAMILY = (BytesNumber.getNumber(RDATA.copyOfRange(4, 6)) as Short).toInt()
+                    val sourceNetMask = RDATA[6].toUInt()
+                    val scpoeNetMask = RDATA[7].toUInt()
+
+                    val ipByteArray =
+                            RDATA.copyOfRange(8, 8 + OPTION_LENGTH - 4).run {
+                                when (FAMILY) {
+                                    1 -> {
+                                        if (this.size < 4) return@run this + ByteArray(4 - this.size) { 0 }
+                                        else return@run this
+                                    }
+
+                                    2 -> {
+                                        if (this.size < 16) return@run this + ByteArray(16 - this.size) { 0 }
+                                        else return@run this
+                                    }
+
+                                    else -> throw KtdnsException("error FAMILY: $FAMILY")
+                                }
+                            }
+
+                    val edns_ecs = Record.EDNS_ECS(InetAddress.getByAddress(ipByteArray), sourceNetMask, scpoeNetMask, CLASS)
+                    edns_ecs.extended_RCODE = EXTENDED_RCODE
+                    edns_ecs.EDNS_VERSION = EDNS_VERSION
+                    edns_ecs.Z = Z
+
+                    pos += OPTION_LENGTH
+                    message.additional.add(edns_ecs)
+                }
+            }
+        }
 
         message.socket = socket
         message.souceAddress = sourceAddress
@@ -151,6 +208,60 @@ class Parse {
             newPos += rdlength
 
             message.addAnswer(answer)
+        }
+
+        loop@ for (i in 0 until message.header.ARCOUNT) {
+            newPos++
+            val type = (BytesNumber.getNumber(buf.copyOfRange(newPos, newPos + 2)) as Short).toInt()
+            when (type) {
+                41 -> {
+                    newPos += 2
+                    val CLASS = (BytesNumber.getNumber(buf.copyOfRange(newPos, newPos + 2)) as Short).toInt()
+                    newPos += 2
+                    val EXTENDED_RCODE = buf[newPos].toUInt()
+                    val EDNS_VERSION = buf[++newPos].toInt()
+                    val Z = buf.copyOfRange(newPos, newPos + 2)
+
+                    newPos += 2
+                    val RDLENGTH = (BytesNumber.getNumber(buf.copyOfRange(newPos, newPos + 2)) as Short).toInt()
+                    newPos += 2
+
+                    if (RDLENGTH <= 0) continue@loop
+
+                    val RDATA = buf.copyOfRange(newPos, newPos + RDLENGTH)
+
+//                val OPTION_CODE = (buf.getNumber(RDATA.copyOfRange(0, 2)) as Short).toInt()
+                    val OPTION_LENGTH = (BytesNumber.getNumber(RDATA.copyOfRange(2, 4)) as Short).toInt()
+                    val FAMILY = (BytesNumber.getNumber(RDATA.copyOfRange(4, 6)) as Short).toInt()
+                    val sourceNetMask = RDATA[6].toUInt()
+                    val scpoeNetMask = RDATA[7].toUInt()
+
+                    val ipByteArray =
+                            RDATA.copyOfRange(8, 8 + OPTION_LENGTH - 4).run {
+                                when (FAMILY) {
+                                    1 -> {
+                                        if (this.size < 4) return@run this + ByteArray(4 - this.size) { 0 }
+                                        else return@run this
+                                    }
+
+                                    2 -> {
+                                        if (this.size < 16) return@run this + ByteArray(16 - this.size) { 0 }
+                                        else return@run this
+                                    }
+
+                                    else -> throw KtdnsException("error FAMILY: $FAMILY")
+                                }
+                            }
+
+                    val edns_ecs = Record.EDNS_ECS(InetAddress.getByAddress(ipByteArray), sourceNetMask, scpoeNetMask, CLASS)
+
+                    edns_ecs.extended_RCODE = EXTENDED_RCODE
+                    edns_ecs.EDNS_VERSION = EDNS_VERSION
+                    edns_ecs.Z = Z
+                    newPos += OPTION_LENGTH
+                    message.additional.add(edns_ecs)
+                }
+            }
         }
 
         return message

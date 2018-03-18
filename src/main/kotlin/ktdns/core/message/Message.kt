@@ -45,6 +45,15 @@ class Message : Cloneable {
                     answers.forEach { arrayList.addAll(it.toByteArray(offset).toTypedArray()) }
                 }
             }
+
+            if (!additional.isEmpty()) {
+//
+                additional.forEach {
+                    arrayList.addAll(it.toByteArray(null).apply {
+                        if (header.QR == 1) (it as Record.EDNS_ECS).scopeNetMask = it.sourceNetMask
+                    }.toTypedArray())
+                }
+            }
             return arrayList.toByteArray()
         }
 
