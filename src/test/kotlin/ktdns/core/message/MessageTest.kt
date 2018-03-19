@@ -12,8 +12,7 @@ fun main(args: Array<String>) {
         val packet = DatagramPacket(buf, buf.size)
         udpServer.receive(packet)
 
-        val parse = Parse()
-        val message = parse.parseQuery(buf, udpServer, packet.address, packet.port)
+        val message = Parse.parseQuery(buf, udpServer, packet.address, packet.port)
 
         val outMessage = message.clone() as Message
         outMessage.setAnswerMessage(true)

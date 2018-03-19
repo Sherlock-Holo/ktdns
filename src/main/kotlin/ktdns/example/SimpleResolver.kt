@@ -10,7 +10,7 @@ class SimpleResolver(nameserverAddress: InetSocketAddress, bindAddress: InetSock
     init {
         server.bindAddress = bindAddress
         SimpleInterceptor.nameserverAddress = nameserverAddress
-        server.addInterceptor(SimpleInterceptor(server.parse))
+        server.addInterceptor(SimpleInterceptor())
     }
 
     fun start() = server.start()

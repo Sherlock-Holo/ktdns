@@ -31,8 +31,6 @@ class Server(private val chain: AbstractChain) {
 
     private lateinit var socket: DatagramSocket
 
-    val parse = Parse()
-
     fun start() {
         if (interceptors.isEmpty()) {
             throw KtdnsException("no interceptor")
@@ -48,7 +46,7 @@ class Server(private val chain: AbstractChain) {
             }
 
             threadPool.submit {
-                val message = parse.parseQuery(buf.copyOf(packet.length), socket, packet.address, packet.port)
+                val message = Parse.parseQuery(buf.copyOf(packet.length), socket, packet.address, packet.port)
                 val chain = this.chain.clone() as AbstractChain
                 interceptors.forEach { chain.addInterceptor(it) }
 

@@ -7,7 +7,7 @@ import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetSocketAddress
 
-class SimpleInterceptor(private val parse: Parse) : Interceptor {
+class SimpleInterceptor : Interceptor {
     override fun intercept(chain: Chain): Message {
         val queryMessage = chain.message
         val queryBuf = queryMessage.byteArray
@@ -20,7 +20,7 @@ class SimpleInterceptor(private val parse: Parse) : Interceptor {
 
         nameserver.receive(answerPacket)
 
-        val answerMessage = parse.parseAnswer(answerBuf)
+        val answerMessage = Parse.parseAnswer(answerBuf)
         answerMessage.answers.forEach {
             queryMessage.addAnswer(it)
         }

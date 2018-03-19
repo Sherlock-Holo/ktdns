@@ -12,8 +12,7 @@ fun main(args: Array<String>) {
     val packet = DatagramPacket(buf, buf.size)
     udpServer.receive(packet)
 
-    val parse = Parse()
-    val message = parse.parseQuery(buf, udpServer, packet.address, packet.port)
+    val message = Parse.parseQuery(buf, udpServer, packet.address, packet.port)
 
     message.addAdditional(Record.EDNS_ECS(InetAddress.getByName("128.0.0.1"), 24, 0, 4096).apply {
         extended_RCODE = 0
@@ -30,7 +29,7 @@ fun main(args: Array<String>) {
 
     nameserver.receive(answerPacket)
 
-    val answer = parse.parseAnswer(answerBuf)
+    val answer = Parse.parseAnswer(answerBuf)
 
     answer.answers.forEach {
         println(it.NAME + " " + it.TYPE + " " + if (it.TYPE == Record.RecordType.CNAME) String(it.RDATA) else InetAddress.getByAddress(it.RDATA).hostAddress)
