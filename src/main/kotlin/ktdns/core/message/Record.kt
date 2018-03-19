@@ -252,26 +252,4 @@ abstract class Record {
             return arrayList.toByteArray()
         }
     }
-
-    class EDNS_Unknown(
-            override val NAME: String,
-            override val CLASS: Int,
-            override val TTL: Int,
-            override val RDATA: ByteArray
-    ) : Record() {
-        override val TYPE = RecordType.EDNS
-
-        override fun toByteArray(offset: Int?): ByteArray {
-            val arrayList = ArrayList<Byte>()
-            arrayList.add(0)
-
-            arrayList.addAll(BytesNumber.getShortByteArray(TYPE.type.toShort()).toTypedArray())
-            arrayList.addAll(BytesNumber.getShortByteArray(CLASS.toShort()).toTypedArray())
-            arrayList.addAll(BytesNumber.getIntByteArray(TTL).toTypedArray())
-            arrayList.addAll(BytesNumber.getShortByteArray(RDLENGTH.toShort()).toTypedArray())
-            arrayList.addAll(RDATA.toTypedArray())
-
-            return arrayList.toByteArray()
-        }
-    }
 }

@@ -298,11 +298,14 @@ class Parse {
         val noHeaderBuf = messageInfo.buf
 
         loop@ for (i in 0 until message.header.ARCOUNT) {
+            /**  NAME | domain name | MUST be 0 (root domain) **/
             pos++
+
             val type = (BytesNumber.getShort(noHeaderBuf.copyOfRange(pos, pos + 2))).toInt()
+            pos += 2
+
             when (type) {
                 41 -> {
-                    pos += 2
                     val CLASS = (BytesNumber.getShort(noHeaderBuf.copyOfRange(pos, pos + 2))).toInt()
                     pos += 2
 
