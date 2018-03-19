@@ -1,4 +1,4 @@
-package ktdns.server
+package ktdns.example
 
 import java.net.InetSocketAddress
 
