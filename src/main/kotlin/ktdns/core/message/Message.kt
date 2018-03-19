@@ -14,6 +14,8 @@ class Message : Cloneable {
     val answers = ArrayList<Record>()
     private var CNAMEPos = -1
 
+    val nsRecords = ArrayList<Record.NSRecord>()
+
     val additional = ArrayList<Record>()
 
     lateinit var socket: DatagramSocket
@@ -24,6 +26,7 @@ class Message : Cloneable {
         get() {
 
             val arrayList = ArrayList<Byte>()
+            var offset = 12
 
             /** header **/
             arrayList.addAll(header.byteArray.toTypedArray())
@@ -36,20 +39,25 @@ class Message : Cloneable {
             /** answers **/
             if (!answers.isEmpty()) {
                 if (CNAMEPos == -1) {
-                    answers.forEach { arrayList.addAll(it.toByteArray(12).toTypedArray()) }
+//                    answers.forEach { arrayList.addAll(it.toByteArray(offset).toTypedArray()) }
                 } else {
                     val cnameAnswer = answers.removeAt(CNAMEPos)
                     arrayList.addAll(cnameAnswer.toByteArray(12).toTypedArray())
 
-                    val offset = arrayList.size - cnameAnswer.RDLENGTH
+                    offset = arrayList.size - cnameAnswer.RDLENGTH
 
-                    answers.forEach { arrayList.addAll(it.toByteArray(offset).toTypedArray()) }
+//                    answers.forEach { arrayList.addAll(it.toByteArray(offset).toTypedArray()) }
                 }
+                answers.forEach { arrayList.addAll(it.toByteArray(offset).toTypedArray()) }
+            }
+
+            /** nsRecords **/
+            if (!nsRecords.isEmpty()) {
+                nsRecords.forEach { arrayList.addAll(it.toByteArray(offset).toTypedArray()) }
             }
 
             /** additional **/
             if (!additional.isEmpty()) {
-//
                 additional.forEach {
                     arrayList.addAll(it.toByteArray(null).apply {
                         if (header.QR == 1) (it as Record.EDNS_ECS).scopeNetMask = it.sourceNetMask
@@ -64,6 +72,12 @@ class Message : Cloneable {
         else this.header.QR = 0
     }
 
+    fun addQuestion(question: Question): Message {
+        header.QDCOUNT++
+        questions.add(question)
+        return this
+    }
+
     fun addAnswer(answer: Record): Message {
         header.ANCOUNT++
         answers.add(answer)
@@ -74,9 +88,9 @@ class Message : Cloneable {
         return this
     }
 
-    fun addQuestion(question: Question): Message {
-        header.QDCOUNT++
-        questions.add(question)
+    fun addNSRecord(nsRecord: Record.NSRecord): Message {
+        header.NSCOUNT++
+        nsRecords.add(nsRecord)
         return this
     }
 
@@ -210,14 +224,6 @@ class Message : Cloneable {
 
                 return arrayList.toByteArray()
             }
-
-        override fun equals(other: Any?): Boolean {
-            if (other == null) return false
-
-            val question = other as Question
-            return this.QNAME == question.QNAME
-
-        }
     }
 
     companion object {

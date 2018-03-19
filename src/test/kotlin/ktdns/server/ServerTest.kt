@@ -15,6 +15,7 @@ fun main(args: Array<String>) {
             .addInterceptor(AInterceptor())
             .addInterceptor(AAAAInterceptor())
             .addInterceptor(ECSInterceptor())
+            .addInterceptor(NSIntercetpor())
     server.start()
 }
 
@@ -54,6 +55,14 @@ class ECSInterceptor : Interceptor {
             }
         }
 //        message.addAdditional(Record.EDNS_ECS(InetAddress.getByName("128.0.0.1"), 32, 32, 4096))
+        return chain.proceed(message)
+    }
+}
+
+class NSIntercetpor : Interceptor {
+    override fun intercept(chain: Chain): Message {
+        val message = chain.message
+        message.addNSRecord(Record.NSRecord("www.qq.com.", 1, 64, "ns.sherlock.com."))
         return chain.proceed(message)
     }
 }
