@@ -250,6 +250,48 @@ class Parse {
         return message
     }
 
+    private fun parseAN(messageInfo: MessageInfo): MessageInfo {
+        val message = messageInfo.message
+        var newPos = messageInfo.pos
+        val buf = messageInfo.buf
+
+        for (i in 0 until message.header.ANCOUNT) {
+            val nameAndLength = getName(newPos, buf)
+            val name = nameAndLength.name
+            newPos += nameAndLength.length
+            val type = BytesNumber.getShort(buf.copyOfRange(newPos, newPos + 2)).toInt()
+            val `class` = (BytesNumber.getShort(buf.copyOfRange(newPos + 2, newPos + 4))).toInt()
+            val ttl = BytesNumber.getInt(buf.copyOfRange(newPos + 4, newPos + 8))
+            val rdlength = BytesNumber.getShort(buf.copyOfRange(newPos + 8, newPos + 10)).toInt()
+
+            newPos += 2 + 2 + 4 + 2
+
+            val answer = when (type) {
+                5 -> {
+                    val cname = getName(newPos, buf).name
+                    Record.CNAMEAnswer(name, `class`, ttl, cname)
+                }
+
+                1 -> {
+                    val address = InetAddress.getByAddress(buf.copyOfRange(newPos, newPos + 4))
+                    Record.AAnswer(name, `class`, ttl, address)
+                }
+
+                28 -> {
+                    val address = InetAddress.getByAddress(buf.copyOfRange(newPos, newPos + 16))
+                    Record.AAAAAnswer(name, `class`, ttl, address)
+                }
+
+                else -> TODO("other not implement answer type: $type")
+            }
+
+            newPos += rdlength
+
+            message.addAnswer(answer)
+        }
+        return MessageInfo(buf, newPos, message)
+    }
+
     private fun parseAR(messageInfo: MessageInfo): MessageInfo {
         val message = messageInfo.message
         var pos = messageInfo.pos
@@ -311,47 +353,5 @@ class Parse {
             }
         }
         return MessageInfo(noHeaderBuf, pos, message)
-    }
-
-    private fun parseAN(messageInfo: MessageInfo): MessageInfo {
-        val message = messageInfo.message
-        var newPos = messageInfo.pos
-        val buf = messageInfo.buf
-
-        for (i in 0 until message.header.ANCOUNT) {
-            val nameAndLength = getName(newPos, buf)
-            val name = nameAndLength.name
-            newPos += nameAndLength.length
-            val type = BytesNumber.getShort(buf.copyOfRange(newPos, newPos + 2)).toInt()
-            val `class` = (BytesNumber.getShort(buf.copyOfRange(newPos + 2, newPos + 4))).toInt()
-            val ttl = BytesNumber.getInt(buf.copyOfRange(newPos + 4, newPos + 8))
-            val rdlength = BytesNumber.getShort(buf.copyOfRange(newPos + 8, newPos + 10)).toInt()
-
-            newPos += 2 + 2 + 4 + 2
-
-            val answer = when (type) {
-                5 -> {
-                    val cname = getName(newPos, buf).name
-                    Record.CNAMEAnswer(name, `class`, ttl, cname)
-                }
-
-                1 -> {
-                    val address = InetAddress.getByAddress(buf.copyOfRange(newPos, newPos + 4))
-                    Record.AAnswer(name, `class`, ttl, address)
-                }
-
-                28 -> {
-                    val address = InetAddress.getByAddress(buf.copyOfRange(newPos, newPos + 16))
-                    Record.AAAAAnswer(name, `class`, ttl, address)
-                }
-
-                else -> TODO("other not implement answer type: $type")
-            }
-
-            newPos += rdlength
-
-            message.addAnswer(answer)
-        }
-        return MessageInfo(buf, newPos, message)
     }
 }
