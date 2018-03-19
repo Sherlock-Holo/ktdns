@@ -2,6 +2,7 @@ package ktdns.core.message
 
 import ktdns.KtdnsException
 import ktdns.extend.BytesNumber
+import ktdns.extend.toUInt
 import java.net.InetAddress
 
 abstract class Record {
@@ -125,11 +126,12 @@ abstract class Record {
             val ip: InetAddress,
             val sourceNetMask: Int,
             var scopeNetMask: Int,
-            override val CLASS: Int
+            var udpLength: Int
     ) : Record() {
 
         override val NAME = "0"
         override val TYPE = RecordType.EDNS
+        override val CLASS = udpLength
 
         val realEDNSIP: InetAddress
             get() {
@@ -140,29 +142,29 @@ abstract class Record {
                         when {
                             (32 - sourceNetMask) <= 8 -> {
                                 for (i in 0 until 8) {
-                                    if (i < 32 - sourceNetMask) sb.append('0')
-                                    else sb.append('1')
+                                    if (i < 8 - (32 - sourceNetMask)) sb.append('1')
+                                    else sb.append('0')
                                 }
-                                ipByteArray[3] = Integer.parseInt(sb.toString(), 2).toByte()
+                                ipByteArray[3] = (ipByteArray[3].toUInt() and Integer.parseInt(sb.toString(), 2)).toByte()
                             }
 
                             (32 - sourceNetMask) <= 16 -> {
                                 ipByteArray[3] = 0
                                 for (i in 0 until 8) {
-                                    if (i < 24 - sourceNetMask) sb.append('0')
-                                    else sb.append('1')
+                                    if (i < 8 - (24 - sourceNetMask)) sb.append('1')
+                                    else sb.append('0')
                                 }
-                                ipByteArray[2] = Integer.getInteger(sb.toString(), 2).toByte()
+                                ipByteArray[2] = (ipByteArray[2].toUInt() and Integer.parseInt(sb.toString(), 2)).toByte()
                             }
 
                             (32 - sourceNetMask) <= 24 -> {
                                 ipByteArray[3] = 0
                                 ipByteArray[2] = 0
                                 for (i in 0 until 8) {
-                                    if (i < 16 - sourceNetMask) sb.append('0')
-                                    else sb.append('1')
+                                    if (i < 8 - (16 - sourceNetMask)) sb.append('1')
+                                    else sb.append('0')
                                 }
-                                ipByteArray[1] = Integer.getInteger(sb.toString(), 2).toByte()
+                                ipByteArray[1] = (ipByteArray[1].toUInt() and Integer.parseInt(sb.toString(), 2)).toByte()
                             }
 
                             else -> {
@@ -170,10 +172,10 @@ abstract class Record {
                                 ipByteArray[2] = 0
                                 ipByteArray[1] = 0
                                 for (i in 0 until 8) {
-                                    if (i < 8 - sourceNetMask) sb.append('1')
+                                    if (i < 8 - (8 - sourceNetMask)) sb.append('1')
                                     else sb.append('0')
                                 }
-                                ipByteArray[0] = Integer.getInteger(sb.toString(), 2).toByte()
+                                ipByteArray[0] = (ipByteArray[0].toUInt() and Integer.parseInt(sb.toString(), 2)).toByte()
                             }
                         }
                         return InetAddress.getByAddress(ipByteArray)
@@ -185,8 +187,8 @@ abstract class Record {
                 }
             }
 
-        var extended_RCODE = -1
-        var EDNS_VERSION = -1
+        var extended_RCODE = 0
+        var EDNS_VERSION = 0
         var Z = ByteArray(2)
 
         override val TTL: Int
@@ -196,7 +198,7 @@ abstract class Record {
                 arrayList.add(EDNS_VERSION.toByte())
 
                 arrayList.addAll(Z.toTypedArray())
-                return BytesNumber.getNumber(arrayList.toByteArray()) as Int
+                return BytesNumber.getInt(arrayList.toByteArray())
             }
 
         /**

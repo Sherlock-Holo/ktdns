@@ -9,12 +9,12 @@ import java.net.InetSocketAddress
 
 fun main(args: Array<String>) {
     val server = Server()
-    val bindAddress = InetSocketAddress(5454)
-    server.bindAddress = bindAddress
+    server.bindAddress = InetSocketAddress(5454)
     server
             .addInterceptor(CNAMEInterceptor())
             .addInterceptor(AInterceptor())
             .addInterceptor(AAAAInterceptor())
+            .addInterceptor(ECSInterceptor())
     server.start()
 }
 
@@ -40,6 +40,20 @@ class AAAAInterceptor : Interceptor {
     override fun intercept(chain: Chain): Message {
         val message = chain.message
         message.addAnswer(Record.AAAAAnswer("ipv6.qq.com.", 1, 64, InetAddress.getByName("::8")))
+        return chain.proceed(message)
+    }
+}
+
+class ECSInterceptor : Interceptor {
+    override fun intercept(chain: Chain): Message {
+        val message = chain.message
+        if (!message.additional.isEmpty()) {
+            message.additional.forEach {
+                it as Record.EDNS_ECS
+                it.scopeNetMask = it.sourceNetMask
+            }
+        }
+//        message.addAdditional(Record.EDNS_ECS(InetAddress.getByName("128.0.0.1"), 32, 32, 4096))
         return chain.proceed(message)
     }
 }

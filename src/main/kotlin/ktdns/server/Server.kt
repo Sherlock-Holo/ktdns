@@ -48,7 +48,7 @@ class Server(private val chain: AbstractChain) {
             }
 
             threadPool.submit {
-                val message = parse.parseQuery(buf, socket, packet.address, packet.port)
+                val message = parse.parseQuery(buf.copyOf(packet.length), socket, packet.address, packet.port)
                 val chain = this.chain.clone() as AbstractChain
                 interceptors.forEach { chain.addInterceptor(it) }
 

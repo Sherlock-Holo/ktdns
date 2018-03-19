@@ -36,7 +36,7 @@ class BytesNumber {
             }
         }
 
-        fun getNumber(byteArray: ByteArray): Any {
+        private fun getNumber(byteArray: ByteArray): Any {
             when (byteArray.size) {
                 2 -> {
                     shortBuffer.clear()
@@ -62,6 +62,10 @@ class BytesNumber {
                 else -> TODO("not yet support byteArray size: ${byteArray.size}")
             }
         }
+
+        fun getShort(b: ByteArray) = getNumber(b) as Short
+        fun getInt(b: ByteArray) = getNumber(b) as Int
+        fun getLong(b: ByteArray) = getNumber(b) as Long
     }
 }
 

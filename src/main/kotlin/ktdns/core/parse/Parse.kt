@@ -35,8 +35,8 @@ class Parse {
         val noHeaderBuf = buf.copyOfRange(12, buf.size)
 
         val QNAME = getName(0, noHeaderBuf).name
-        val QTYPE = ByteBuffer.wrap(noHeaderBuf.copyOfRange(QNAME.length + 1, QNAME.length + 3)).short.toInt()
-        val QCLASS = ByteBuffer.wrap(noHeaderBuf.copyOfRange(QNAME.length + 3, QNAME.length + 5)).short.toInt()
+        val QTYPE = BytesNumber.getShort(noHeaderBuf.copyOfRange(QNAME.length + 1, QNAME.length + 3)).toInt()
+        val QCLASS = BytesNumber.getShort(noHeaderBuf.copyOfRange(QNAME.length + 3, QNAME.length + 5)).toInt()
 
         val question = Message.Question()
         question.QNAME = QNAME
@@ -49,18 +49,22 @@ class Parse {
 
         loop@ for (i in 0 until message.header.ARCOUNT) {
             pos++
-            val type = (BytesNumber.getNumber(noHeaderBuf.copyOfRange(pos, pos + 2)) as Short).toInt()
+            val type = (BytesNumber.getShort(noHeaderBuf.copyOfRange(pos, pos + 2))).toInt()
             when (type) {
                 41 -> {
                     pos += 2
-                    val CLASS = (BytesNumber.getNumber(noHeaderBuf.copyOfRange(pos, pos + 2)) as Short).toInt()
+                    val CLASS = (BytesNumber.getShort(noHeaderBuf.copyOfRange(pos, pos + 2))).toInt()
                     pos += 2
-                    val EXTENDED_RCODE = noHeaderBuf[pos].toUInt()
-                    val EDNS_VERSION = noHeaderBuf[++pos].toInt()
+//                    val EXTENDED_RCODE = BytesNumber.getShort(noHeaderBuf.copyOfRange(pos, pos + 2)).toInt()
+                    val EXTENDED_RCODE = noHeaderBuf[pos++].toUInt()
+//                    pos += 2
+                    val EDNS_VERSION = noHeaderBuf[pos++].toUInt()
                     val Z = noHeaderBuf.copyOfRange(pos, pos + 2)
-
                     pos += 2
-                    val RDLENGTH = BytesNumber.getNumber(noHeaderBuf.copyOfRange(pos, pos + 2)) as Int
+
+//                    println("pos: $pos")
+                    val RDLENGTH = (BytesNumber.getShort(noHeaderBuf.copyOfRange(pos, pos + 2))).toInt()
+//                    println("RDLENGTH: $RDLENGTH")
                     pos += 2
 
                     if (RDLENGTH == 0) continue@loop
@@ -68,8 +72,8 @@ class Parse {
                     val RDATA = noHeaderBuf.copyOfRange(pos, pos + RDLENGTH)
 
 //                val OPTION_CODE = (BytesNumber.getNumber(RDATA.copyOfRange(0, 2)) as Short).toInt()
-                    val OPTION_LENGTH = (BytesNumber.getNumber(RDATA.copyOfRange(2, 4)) as Short).toInt()
-                    val FAMILY = (BytesNumber.getNumber(RDATA.copyOfRange(4, 6)) as Short).toInt()
+                    val OPTION_LENGTH = (BytesNumber.getShort(RDATA.copyOfRange(2, 4))).toInt()
+                    val FAMILY = (BytesNumber.getShort(RDATA.copyOfRange(4, 6))).toInt()
                     val sourceNetMask = RDATA[6].toUInt()
                     val scpoeNetMask = RDATA[7].toUInt()
 
@@ -133,8 +137,8 @@ class Parse {
         val noHeaderBuf = buf.copyOfRange(12, buf.size)
 
         val QNAME = getName(0, noHeaderBuf).name
-        val QTYPE = ByteBuffer.wrap(noHeaderBuf.copyOfRange(QNAME.length + 1, QNAME.length + 3)).short.toInt()
-        val QCLASS = ByteBuffer.wrap(noHeaderBuf.copyOfRange(QNAME.length + 3, QNAME.length + 5)).short.toInt()
+        val QTYPE = BytesNumber.getShort(noHeaderBuf.copyOfRange(QNAME.length + 1, QNAME.length + 3)).toInt()
+        val QCLASS = BytesNumber.getShort(noHeaderBuf.copyOfRange(QNAME.length + 3, QNAME.length + 5)).toInt()
 
         val question = Message.Question()
         question.QNAME = QNAME
@@ -179,10 +183,10 @@ class Parse {
             val nameAndLength = getName(newPos, buf)
             val name = nameAndLength.name
             newPos += nameAndLength.length
-            val type = (BytesNumber.getNumber(buf.copyOfRange(newPos, newPos + 2)) as Short).toInt()
-            val `class` = (BytesNumber.getNumber(buf.copyOfRange(newPos + 2, newPos + 4)) as Short).toInt()
-            val ttl = BytesNumber.getNumber(buf.copyOfRange(newPos + 4, newPos + 8)) as Int
-            val rdlength = (BytesNumber.getNumber(buf.copyOfRange(newPos + 8, newPos + 10)) as Short).toInt()
+            val type = BytesNumber.getShort(buf.copyOfRange(newPos, newPos + 2)).toInt()
+            val `class` = (BytesNumber.getShort(buf.copyOfRange(newPos + 2, newPos + 4))).toInt()
+            val ttl = BytesNumber.getInt(buf.copyOfRange(newPos + 4, newPos + 8))
+            val rdlength = BytesNumber.getShort(buf.copyOfRange(newPos + 8, newPos + 10)).toInt()
 
             newPos += 2 + 2 + 4 + 2
 
@@ -212,18 +216,18 @@ class Parse {
 
         loop@ for (i in 0 until message.header.ARCOUNT) {
             newPos++
-            val type = (BytesNumber.getNumber(buf.copyOfRange(newPos, newPos + 2)) as Short).toInt()
+            val type = (BytesNumber.getShort(buf.copyOfRange(newPos, newPos + 2))).toInt()
             when (type) {
                 41 -> {
                     newPos += 2
-                    val CLASS = (BytesNumber.getNumber(buf.copyOfRange(newPos, newPos + 2)) as Short).toInt()
+                    val CLASS = (BytesNumber.getShort(buf.copyOfRange(newPos, newPos + 2))).toInt()
                     newPos += 2
                     val EXTENDED_RCODE = buf[newPos].toUInt()
                     val EDNS_VERSION = buf[++newPos].toInt()
                     val Z = buf.copyOfRange(newPos, newPos + 2)
 
                     newPos += 2
-                    val RDLENGTH = (BytesNumber.getNumber(buf.copyOfRange(newPos, newPos + 2)) as Short).toInt()
+                    val RDLENGTH = (BytesNumber.getShort(buf.copyOfRange(newPos, newPos + 2))).toInt()
                     newPos += 2
 
                     if (RDLENGTH <= 0) continue@loop
@@ -231,8 +235,8 @@ class Parse {
                     val RDATA = buf.copyOfRange(newPos, newPos + RDLENGTH)
 
 //                val OPTION_CODE = (buf.getNumber(RDATA.copyOfRange(0, 2)) as Short).toInt()
-                    val OPTION_LENGTH = (BytesNumber.getNumber(RDATA.copyOfRange(2, 4)) as Short).toInt()
-                    val FAMILY = (BytesNumber.getNumber(RDATA.copyOfRange(4, 6)) as Short).toInt()
+                    val OPTION_LENGTH = (BytesNumber.getShort(RDATA.copyOfRange(2, 4))).toInt()
+                    val FAMILY = (BytesNumber.getShort(RDATA.copyOfRange(4, 6))).toInt()
                     val sourceNetMask = RDATA[6].toUInt()
                     val scpoeNetMask = RDATA[7].toUInt()
 
@@ -286,7 +290,7 @@ class Parse {
                 length = buf[pos].toUInt()
 
                 if (length == 0b11000000) {
-                    pos = (BytesNumber.getNumber(buf.copyOfRange(pos, pos + 2)) as Short).toInt() and 0b00111111
+                    pos = (BytesNumber.getShort(buf.copyOfRange(pos, pos + 2))).toInt() and 0b00111111
                     sb.append(getName(pos, buf).name)
                     return NameAndLength(sb.toString(), stringLength + 2)
                 }
@@ -296,7 +300,7 @@ class Parse {
 
             return NameAndLength(sb.toString(), stringLength + 1)
         } else {
-            val pos = (BytesNumber.getNumber(buf.copyOfRange(offset, offset + 2)) as Short).toInt() and 0b00111111
+            val pos = (BytesNumber.getShort(buf.copyOfRange(offset, offset + 2))).toInt() and 0b00111111
             return NameAndLength(getName(pos, buf).name, 2)
         }
     }

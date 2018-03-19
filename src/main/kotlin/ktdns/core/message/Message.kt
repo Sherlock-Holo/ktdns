@@ -1,5 +1,6 @@
 package ktdns.core.message
 
+import ktdns.extend.BytesNumber
 import java.net.DatagramSocket
 import java.net.InetAddress
 import java.nio.ByteBuffer
@@ -46,6 +47,7 @@ class Message : Cloneable {
                 }
             }
 
+            /** additional **/
             if (!additional.isEmpty()) {
 //
                 additional.forEach {
@@ -202,15 +204,9 @@ class Message : Cloneable {
 
                 arrayList.addAll(QNAMEByteArray.toTypedArray())
 
-                val tmp = ByteArray(2)
-                val tmpByteBuffer = ByteBuffer.wrap(tmp)
+                arrayList.addAll(BytesNumber.getShortByteArray(QTYPE.toShort()).toTypedArray())
 
-                tmpByteBuffer.putShort(QTYPE.toShort())
-                arrayList.addAll(tmp.toTypedArray())
-
-                tmpByteBuffer.clear()
-                tmpByteBuffer.putShort(QCLASS.toShort())
-                arrayList.addAll(tmp.toTypedArray())
+                arrayList.addAll(BytesNumber.getShortByteArray(QCLASS.toShort()).toTypedArray())
 
                 return arrayList.toByteArray()
             }
