@@ -1,6 +1,7 @@
-package ktdns.server
+package ktdns.example
 
 import ktdns.interceptor.SimpleInterceptor
+import ktdns.server.Server
 import java.net.InetSocketAddress
 
 class SimpleResolver(nameserverAddress: InetSocketAddress, bindAddress: InetSocketAddress) {
