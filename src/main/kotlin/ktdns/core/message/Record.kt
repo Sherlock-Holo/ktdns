@@ -8,6 +8,7 @@ import java.net.InetAddress
 abstract class Record {
     enum class RecordType(val type: Int) {
         A(1),
+        NS(2),
         AAAA(28),
         CNAME(5),
         EDNS(41)
@@ -105,19 +106,7 @@ abstract class Record {
     ) : Record() {
         override val TYPE = RecordType.CNAME
 
-        override val RDATA: ByteArray
-            get() {
-                val list = cname.substring(0, cname.length - 1).split('.')
-                val arrayList = ArrayList<Byte>()
-
-                list.forEach {
-                    arrayList.add(it.length.toByte())
-                    arrayList.addAll(it.toByteArray().toTypedArray())
-                }
-                arrayList.add(0.toByte())
-
-                return arrayList.toByteArray()
-            }
+        override val RDATA get() = super.string2RDATA(cname)
 
         override val RDLENGTH get() = RDATA.size
     }
@@ -251,5 +240,29 @@ abstract class Record {
 
             return arrayList.toByteArray()
         }
+    }
+
+    class NSRecord(
+            override val NAME: String,
+            override val CLASS: Int,
+            override val TTL: Int,
+            val server: String
+    ) : Record() {
+        override val TYPE = RecordType.NS
+
+        override val RDATA get() = super.string2RDATA(server)
+    }
+
+    private fun string2RDATA(s: String): ByteArray {
+        val list = s.substring(0, s.length - 1).split('.')
+        val arrayList = ArrayList<Byte>()
+
+        list.forEach {
+            arrayList.add(it.length.toByte())
+            arrayList.addAll(it.toByteArray().toTypedArray())
+        }
+        arrayList.add(0.toByte())
+
+        return arrayList.toByteArray()
     }
 }
