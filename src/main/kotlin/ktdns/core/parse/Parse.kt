@@ -10,6 +10,8 @@ import java.net.InetAddress
 import java.nio.ByteBuffer
 
 class Parse {
+    private data class MessageInfo(val buf: ByteArray, val pos: Int, val message: Message)
+
     fun parseQuery(buf: ByteArray, socket: DatagramSocket, sourceAddress: InetAddress, sourcePort: Int): Message {
         val message = parseHeader(buf)
 
@@ -45,65 +47,11 @@ class Parse {
 
         message.questions.add(question)
 
-        var pos = QNAME.length + 5
+        val pos = QNAME.length + 5
 
-        loop@ for (i in 0 until message.header.ARCOUNT) {
-            pos++
-            val type = (BytesNumber.getShort(noHeaderBuf.copyOfRange(pos, pos + 2))).toInt()
-            when (type) {
-                41 -> {
-                    pos += 2
-                    val CLASS = (BytesNumber.getShort(noHeaderBuf.copyOfRange(pos, pos + 2))).toInt()
-                    pos += 2
-//                    val EXTENDED_RCODE = BytesNumber.getShort(noHeaderBuf.copyOfRange(pos, pos + 2)).toInt()
-                    val EXTENDED_RCODE = noHeaderBuf[pos++].toUInt()
-//                    pos += 2
-                    val EDNS_VERSION = noHeaderBuf[pos++].toUInt()
-                    val Z = noHeaderBuf.copyOfRange(pos, pos + 2)
-                    pos += 2
+        val messageInfo = MessageInfo(noHeaderBuf, pos, message)
 
-//                    println("pos: $pos")
-                    val RDLENGTH = (BytesNumber.getShort(noHeaderBuf.copyOfRange(pos, pos + 2))).toInt()
-//                    println("RDLENGTH: $RDLENGTH")
-                    pos += 2
-
-                    if (RDLENGTH == 0) continue@loop
-
-                    val RDATA = noHeaderBuf.copyOfRange(pos, pos + RDLENGTH)
-
-//                val OPTION_CODE = (BytesNumber.getNumber(RDATA.copyOfRange(0, 2)) as Short).toInt()
-                    val OPTION_LENGTH = (BytesNumber.getShort(RDATA.copyOfRange(2, 4))).toInt()
-                    val FAMILY = (BytesNumber.getShort(RDATA.copyOfRange(4, 6))).toInt()
-                    val sourceNetMask = RDATA[6].toUInt()
-                    val scpoeNetMask = RDATA[7].toUInt()
-
-                    val ipByteArray =
-                            RDATA.copyOfRange(8, 8 + OPTION_LENGTH - 4).run {
-                                when (FAMILY) {
-                                    1 -> {
-                                        if (this.size < 4) return@run this + ByteArray(4 - this.size) { 0 }
-                                        else return@run this
-                                    }
-
-                                    2 -> {
-                                        if (this.size < 16) return@run this + ByteArray(16 - this.size) { 0 }
-                                        else return@run this
-                                    }
-
-                                    else -> throw KtdnsException("error FAMILY: $FAMILY")
-                                }
-                            }
-
-                    val edns_ecs = Record.EDNS_ECS(InetAddress.getByAddress(ipByteArray), sourceNetMask, scpoeNetMask, CLASS)
-                    edns_ecs.extended_RCODE = EXTENDED_RCODE
-                    edns_ecs.EDNS_VERSION = EDNS_VERSION
-                    edns_ecs.Z = Z
-
-                    pos += OPTION_LENGTH
-                    message.additional.add(edns_ecs)
-                }
-            }
-        }
+        parseAR(messageInfo)
 
         message.socket = socket
         message.souceAddress = sourceAddress
@@ -147,7 +95,7 @@ class Parse {
 
         message.questions.add(question)
 
-        var newPos = 12 + QNAME.length + 1 + 4
+        val newPos = 12 + QNAME.length + 1 + 4
 
         /**
         0  1  2  3  4  5  6  7  0  1  2  3  4  5  6  7
@@ -179,94 +127,9 @@ class Parse {
         ## RDATA 不定长字符串来表示记录，格式根TYPE和CLASS有关。比如，TYPE是A，CLASS 是 IN，那么RDATA就是一个4个字节的ARPA网络地址
          */
 
-        for (i in 0 until message.header.ANCOUNT) {
-            val nameAndLength = getName(newPos, buf)
-            val name = nameAndLength.name
-            newPos += nameAndLength.length
-            val type = BytesNumber.getShort(buf.copyOfRange(newPos, newPos + 2)).toInt()
-            val `class` = (BytesNumber.getShort(buf.copyOfRange(newPos + 2, newPos + 4))).toInt()
-            val ttl = BytesNumber.getInt(buf.copyOfRange(newPos + 4, newPos + 8))
-            val rdlength = BytesNumber.getShort(buf.copyOfRange(newPos + 8, newPos + 10)).toInt()
-
-            newPos += 2 + 2 + 4 + 2
-
-            val answer = when (type) {
-                5 -> {
-                    val cname = getName(newPos, buf).name
-                    Record.CNAMEAnswer(name, `class`, ttl, cname)
-                }
-
-                1 -> {
-                    val address = InetAddress.getByAddress(buf.copyOfRange(newPos, newPos + 4))
-                    Record.AAnswer(name, `class`, ttl, address)
-                }
-
-                28 -> {
-                    val address = InetAddress.getByAddress(buf.copyOfRange(newPos, newPos + 16))
-                    Record.AAAAAnswer(name, `class`, ttl, address)
-                }
-
-                else -> TODO("other not implement answer type: $type")
-            }
-
-            newPos += rdlength
-
-            message.addAnswer(answer)
-        }
-
-        loop@ for (i in 0 until message.header.ARCOUNT) {
-            newPos++
-            val type = (BytesNumber.getShort(buf.copyOfRange(newPos, newPos + 2))).toInt()
-            when (type) {
-                41 -> {
-                    newPos += 2
-                    val CLASS = (BytesNumber.getShort(buf.copyOfRange(newPos, newPos + 2))).toInt()
-                    newPos += 2
-                    val EXTENDED_RCODE = buf[newPos].toUInt()
-                    val EDNS_VERSION = buf[++newPos].toInt()
-                    val Z = buf.copyOfRange(newPos, newPos + 2)
-
-                    newPos += 2
-                    val RDLENGTH = (BytesNumber.getShort(buf.copyOfRange(newPos, newPos + 2))).toInt()
-                    newPos += 2
-
-                    if (RDLENGTH <= 0) continue@loop
-
-                    val RDATA = buf.copyOfRange(newPos, newPos + RDLENGTH)
-
-//                val OPTION_CODE = (buf.getNumber(RDATA.copyOfRange(0, 2)) as Short).toInt()
-                    val OPTION_LENGTH = (BytesNumber.getShort(RDATA.copyOfRange(2, 4))).toInt()
-                    val FAMILY = (BytesNumber.getShort(RDATA.copyOfRange(4, 6))).toInt()
-                    val sourceNetMask = RDATA[6].toUInt()
-                    val scpoeNetMask = RDATA[7].toUInt()
-
-                    val ipByteArray =
-                            RDATA.copyOfRange(8, 8 + OPTION_LENGTH - 4).run {
-                                when (FAMILY) {
-                                    1 -> {
-                                        if (this.size < 4) return@run this + ByteArray(4 - this.size) { 0 }
-                                        else return@run this
-                                    }
-
-                                    2 -> {
-                                        if (this.size < 16) return@run this + ByteArray(16 - this.size) { 0 }
-                                        else return@run this
-                                    }
-
-                                    else -> throw KtdnsException("error FAMILY: $FAMILY")
-                                }
-                            }
-
-                    val edns_ecs = Record.EDNS_ECS(InetAddress.getByAddress(ipByteArray), sourceNetMask, scpoeNetMask, CLASS)
-
-                    edns_ecs.extended_RCODE = EXTENDED_RCODE
-                    edns_ecs.EDNS_VERSION = EDNS_VERSION
-                    edns_ecs.Z = Z
-                    newPos += OPTION_LENGTH
-                    message.additional.add(edns_ecs)
-                }
-            }
-        }
+        var messageInfo = MessageInfo(buf, newPos, message)
+        messageInfo = parseAN(messageInfo)
+        parseAR(messageInfo)
 
         return message
     }
@@ -385,5 +248,110 @@ class Parse {
         header.ARCOUNT = ARCOUNT
 
         return message
+    }
+
+    private fun parseAR(messageInfo: MessageInfo): MessageInfo {
+        val message = messageInfo.message
+        var pos = messageInfo.pos
+        val noHeaderBuf = messageInfo.buf
+
+        loop@ for (i in 0 until message.header.ARCOUNT) {
+            pos++
+            val type = (BytesNumber.getShort(noHeaderBuf.copyOfRange(pos, pos + 2))).toInt()
+            when (type) {
+                41 -> {
+                    pos += 2
+                    val CLASS = (BytesNumber.getShort(noHeaderBuf.copyOfRange(pos, pos + 2))).toInt()
+                    pos += 2
+
+                    val EXTENDED_RCODE = noHeaderBuf[pos++].toUInt()
+
+                    val EDNS_VERSION = noHeaderBuf[pos++].toUInt()
+                    val Z = noHeaderBuf.copyOfRange(pos, pos + 2)
+                    pos += 2
+
+                    val RDLENGTH = (BytesNumber.getShort(noHeaderBuf.copyOfRange(pos, pos + 2))).toInt()
+                    pos += 2
+
+                    if (RDLENGTH == 0) continue@loop
+
+                    val RDATA = noHeaderBuf.copyOfRange(pos, pos + RDLENGTH)
+
+//                val OPTION_CODE = (BytesNumber.getNumber(RDATA.copyOfRange(0, 2)) as Short).toInt()
+                    val OPTION_LENGTH = (BytesNumber.getShort(RDATA.copyOfRange(2, 4))).toInt()
+                    val FAMILY = (BytesNumber.getShort(RDATA.copyOfRange(4, 6))).toInt()
+                    val sourceNetMask = RDATA[6].toUInt()
+                    val scpoeNetMask = RDATA[7].toUInt()
+
+                    val ipByteArray =
+                            RDATA.copyOfRange(8, 8 + OPTION_LENGTH - 4).run {
+                                when (FAMILY) {
+                                    1 -> {
+                                        if (this.size < 4) return@run this + ByteArray(4 - this.size) { 0 }
+                                        else return@run this
+                                    }
+
+                                    2 -> {
+                                        if (this.size < 16) return@run this + ByteArray(16 - this.size) { 0 }
+                                        else return@run this
+                                    }
+
+                                    else -> throw KtdnsException("error FAMILY: $FAMILY")
+                                }
+                            }
+
+                    val edns_ecs = Record.EDNS_ECS(InetAddress.getByAddress(ipByteArray), sourceNetMask, scpoeNetMask, CLASS)
+                    edns_ecs.extended_RCODE = EXTENDED_RCODE
+                    edns_ecs.EDNS_VERSION = EDNS_VERSION
+                    edns_ecs.Z = Z
+
+                    pos += OPTION_LENGTH
+                    message.additional.add(edns_ecs)
+                }
+            }
+        }
+        return MessageInfo(noHeaderBuf, pos, message)
+    }
+
+    private fun parseAN(messageInfo: MessageInfo): MessageInfo {
+        val message = messageInfo.message
+        var newPos = messageInfo.pos
+        val buf = messageInfo.buf
+
+        for (i in 0 until message.header.ANCOUNT) {
+            val nameAndLength = getName(newPos, buf)
+            val name = nameAndLength.name
+            newPos += nameAndLength.length
+            val type = BytesNumber.getShort(buf.copyOfRange(newPos, newPos + 2)).toInt()
+            val `class` = (BytesNumber.getShort(buf.copyOfRange(newPos + 2, newPos + 4))).toInt()
+            val ttl = BytesNumber.getInt(buf.copyOfRange(newPos + 4, newPos + 8))
+            val rdlength = BytesNumber.getShort(buf.copyOfRange(newPos + 8, newPos + 10)).toInt()
+
+            newPos += 2 + 2 + 4 + 2
+
+            val answer = when (type) {
+                5 -> {
+                    val cname = getName(newPos, buf).name
+                    Record.CNAMEAnswer(name, `class`, ttl, cname)
+                }
+
+                1 -> {
+                    val address = InetAddress.getByAddress(buf.copyOfRange(newPos, newPos + 4))
+                    Record.AAnswer(name, `class`, ttl, address)
+                }
+
+                28 -> {
+                    val address = InetAddress.getByAddress(buf.copyOfRange(newPos, newPos + 16))
+                    Record.AAAAAnswer(name, `class`, ttl, address)
+                }
+
+                else -> TODO("other not implement answer type: $type")
+            }
+
+            newPos += rdlength
+
+            message.addAnswer(answer)
+        }
+        return MessageInfo(buf, newPos, message)
     }
 }
