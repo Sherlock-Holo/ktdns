@@ -319,40 +319,74 @@ class Parse {
                         val RDLENGTH = (BytesNumber.getShort(noHeaderBuf.copyOfRange(pos, pos + 2))).toInt()
                         pos += 2
 
-                        if (RDLENGTH == 0) continue@loop
+                        val edns = Record.EDNSRecord(CLASS, EXTENDED_RCODE, EDNS_VERSION, Z)
+
+                        if (RDLENGTH == 0) {
+                            message.addAdditional(edns)
+                            println("no data EDNS")
+                            continue@loop
+                        }
 
                         val RDATA = noHeaderBuf.copyOfRange(pos, pos + RDLENGTH)
 
-//                val OPTION_CODE = (BytesNumber.getNumber(RDATA.copyOfRange(0, 2)) as Short).toInt()
-                        val OPTION_LENGTH = (BytesNumber.getShort(RDATA.copyOfRange(2, 4))).toInt()
-                        val FAMILY = (BytesNumber.getShort(RDATA.copyOfRange(4, 6))).toInt()
-                        val sourceNetMask = RDATA[6].toUInt()
-                        val scpoeNetMask = RDATA[7].toUInt()
+                        var ePos = 0
+                        /** EDNS pos **/
 
-                        val ipByteArray =
-                                RDATA.copyOfRange(8, 8 + OPTION_LENGTH - 4).run {
-                                    when (FAMILY) {
-                                        1 -> {
-                                            if (this.size < 4) return@run this + ByteArray(4 - this.size) { 0 }
-                                            else return@run this
-                                        }
+                        while (ePos < RDLENGTH - 1) {
+                            val OPTION_CODE = BytesNumber.getShort(RDATA.copyOfRange(ePos, ePos + 2)).toInt()
+                            ePos += 2
 
-                                        2 -> {
-                                            if (this.size < 16) return@run this + ByteArray(16 - this.size) { 0 }
-                                            else return@run this
-                                        }
+                            val OPTION_LENGTH = (BytesNumber.getShort(RDATA.copyOfRange(ePos, ePos + 2))).toInt()
+                            ePos += 2
 
-                                        else -> throw KtdnsException("error FAMILY: $FAMILY")
-                                    }
+                            when (OPTION_CODE) {
+                            /** 8 for ECS **/
+                                8 -> {
+                                    val FAMILY = (BytesNumber.getShort(RDATA.copyOfRange(ePos, ePos + 2))).toInt()
+                                    ePos += 2
+
+                                    val sourceNetMask = RDATA[ePos++].toUInt()
+                                    val scpoeNetMask = RDATA[ePos++].toUInt()
+
+                                    val ipByteArray =
+                                            RDATA.copyOfRange(ePos, ePos + OPTION_LENGTH - 4).run {
+                                                when (FAMILY) {
+                                                    1 -> {
+                                                        if (this.size < 4) return@run this + ByteArray(4 - this.size) { 0 }
+                                                        else return@run this
+                                                    }
+
+                                                    2 -> {
+                                                        if (this.size < 16) return@run this + ByteArray(16 - this.size) { 0 }
+                                                        else return@run this
+                                                    }
+
+                                                    else -> throw KtdnsException("error FAMILY: $FAMILY")
+                                                }
+                                            }
+
+                                    ePos += OPTION_LENGTH - 4
+
+                                    val ecsData = Record.EDNSRecord.ECS_DATA(
+                                            InetAddress.getByAddress(ipByteArray),
+                                            sourceNetMask,
+                                            scpoeNetMask
+                                    )
+                                    edns.addOptionData(ecsData)
                                 }
 
-                        val edns_ecs = Record.EDNS_ECS(InetAddress.getByAddress(ipByteArray), sourceNetMask, scpoeNetMask, CLASS)
-                        edns_ecs.extended_RCODE = EXTENDED_RCODE
-                        edns_ecs.EDNS_VERSION = EDNS_VERSION
-                        edns_ecs.Z = Z
+                                else -> {
+                                    println("unknown EDNS")
+                                    val data = RDATA.copyOfRange(ePos, ePos + OPTION_LENGTH)
+                                    ePos += OPTION_LENGTH
 
-                        pos += OPTION_LENGTH
-                        message.additional.add(edns_ecs)
+                                    val unknownData = Record.EDNSRecord.UnknownData(OPTION_CODE, data)
+                                    edns.addOptionData(unknownData)
+                                }
+                            }
+                        }
+                        message.addAdditional(edns)
+                        println("add EDNS record")
                     }
                 }
             }

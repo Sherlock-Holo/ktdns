@@ -14,7 +14,7 @@ fun main(args: Array<String>) {
             .addInterceptor(CNAMEInterceptor())
             .addInterceptor(AInterceptor())
             .addInterceptor(AAAAInterceptor())
-            .addInterceptor(ECSInterceptor())
+//            .addInterceptor(EDNSInterceptor())
             .addInterceptor(NSIntercetpor())
     server.start()
 }
@@ -32,7 +32,7 @@ class CNAMEInterceptor : Interceptor {
 class AInterceptor : Interceptor {
     override fun intercept(chain: Chain): Message {
         val message = chain.message
-        message.addAnswer(Record.AAnswer("ipv6.qq.com.", 1, 64, InetAddress.getByName("127.1.1.1")))
+        message.addAnswer(Record.AAnswer("www.qq.com.", 1, 64, InetAddress.getByName("112.90.83.112")))
         return chain.proceed(message)
     }
 }
@@ -45,24 +45,17 @@ class AAAAInterceptor : Interceptor {
     }
 }
 
-class ECSInterceptor : Interceptor {
-    override fun intercept(chain: Chain): Message {
-        val message = chain.message
-        if (!message.additional.isEmpty()) {
-            message.additional.forEach {
-                it as Record.EDNS_ECS
-                it.scopeNetMask = it.sourceNetMask
-            }
-        }
-//        message.addAdditional(Record.EDNS_ECS(InetAddress.getByName("128.0.0.1"), 32, 32, 4096))
-        return chain.proceed(message)
-    }
-}
-
 class NSIntercetpor : Interceptor {
     override fun intercept(chain: Chain): Message {
         val message = chain.message
         message.addNSRecord(Record.NSRecord("www.qq.com.", 1, 64, "ns.sherlock.com."))
         return chain.proceed(message)
+    }
+}
+
+@Deprecated("just use for debug")
+class EDNSInterceptor : Interceptor {
+    override fun intercept(chain: Chain): Message {
+        return chain.proceed(chain.message.apply { this.header.ARCOUNT = 1 })
     }
 }

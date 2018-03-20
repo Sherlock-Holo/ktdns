@@ -37,39 +37,57 @@ class Message : Cloneable {
             }
 
             /** answers **/
-            if (!answers.isEmpty()) {
-                if (CNAMEPos == -1) {
+            if (CNAMEPos == -1) {
 //                    answers.forEach { arrayList.addAll(it.toByteArray(offset).toTypedArray()) }
-                } else {
-                    val cnameAnswer = answers.removeAt(CNAMEPos)
-                    arrayList.addAll(cnameAnswer.toByteArray(12).toTypedArray())
+            } else {
+                val cnameAnswer = answers.removeAt(CNAMEPos)
+                arrayList.addAll(cnameAnswer.toByteArray(12).toTypedArray())
 
-                    offset = arrayList.size - cnameAnswer.RDLENGTH
-
-//                    answers.forEach { arrayList.addAll(it.toByteArray(offset).toTypedArray()) }
-                }
-                answers.forEach { arrayList.addAll(it.toByteArray(offset).toTypedArray()) }
+                offset = arrayList.size - cnameAnswer.RDLENGTH
             }
+            answers.forEach { arrayList.addAll(it.toByteArray(offset).toTypedArray()) }
 
             /** nsRecords **/
-            if (!nsRecords.isEmpty()) {
-                nsRecords.forEach { arrayList.addAll(it.toByteArray(offset).toTypedArray()) }
-            }
+            nsRecords.forEach { arrayList.addAll(it.toByteArray(offset).toTypedArray()) }
 
             /** additional **/
-            if (!additional.isEmpty()) {
-                additional.forEach {
-                    arrayList.addAll(it.toByteArray(null).apply {
-                        if (header.QR == 1) (it as Record.EDNS_ECS).scopeNetMask = it.sourceNetMask
-                    }.toTypedArray())
+            additional.forEach {
+                it.apply {
+                    when (it.TYPE) {
+
+                        Record.RecordType.EDNS -> {
+
+                            it as Record.EDNSRecord
+                            it.optionDatas.forEach {
+                                when {
+                                    Record.EDNSRecord.ECS_DATA::class.java.isInstance(it) -> {
+                                        if (header.QR == 1) {
+                                            it as Record.EDNSRecord.ECS_DATA
+                                            it.scopeNetMask = it.sourceNetMask
+                                        }
+                                    }
+                                }
+                            }
+
+                            arrayList.addAll(it.toByteArray(null).toTypedArray())
+                        }
+
+                        else -> TODO("other additional record")
+                    }
                 }
             }
+
             return arrayList.toByteArray()
         }
 
     fun setAnswerMessage(boolean: Boolean) {
-        if (boolean) this.header.QR = 1
-        else this.header.QR = 0
+        if (boolean) {
+            this.header.QR = 1
+            this.header.QDCOUNT = questions.size
+            this.header.ANCOUNT = answers.size
+            this.header.NSCOUNT = nsRecords.size
+            this.header.ARCOUNT = additional.size
+        } else this.header.QR = 0
     }
 
     fun addQuestion(question: Question): Message {

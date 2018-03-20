@@ -16,7 +16,7 @@ class SimpleQuery {
             val answerByteArray = ByteArray(4096)
             val answerPacket = DatagramPacket(answerByteArray, answerByteArray.size, serverAddress)
             server.receive(answerPacket)
-            return Parse.parseAnswer(answerByteArray)
+            return Parse.parseAnswer(answerByteArray).apply { this.setAnswerMessage(true) }
         }
     }
 }
