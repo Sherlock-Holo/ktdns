@@ -37,14 +37,13 @@ class Message : Cloneable {
             }
 
             /** answers **/
-            if (CNAMEPos == -1) {
-//                    answers.forEach { arrayList.addAll(it.toByteArray(offset).toTypedArray()) }
-            } else {
+            if (CNAMEPos != -1) {
                 val cnameAnswer = answers.removeAt(CNAMEPos)
                 arrayList.addAll(cnameAnswer.toByteArray(12).toTypedArray())
 
                 offset = arrayList.size - cnameAnswer.RDLENGTH
             }
+
             answers.forEach { arrayList.addAll(it.toByteArray(offset).toTypedArray()) }
 
             /** nsRecords **/
@@ -150,7 +149,6 @@ class Message : Cloneable {
                                 (AA shl 2) or
                                 (TC shl 1) or
                                 RD
-//                                RA
                         ).toByte()
 
                 val byte2 = (
