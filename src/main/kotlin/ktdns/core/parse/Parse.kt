@@ -323,7 +323,6 @@ class Parse {
 
                         if (RDLENGTH == 0) {
                             message.addAdditional(edns)
-                            println("no data EDNS")
                             continue@loop
                         }
 
@@ -376,7 +375,6 @@ class Parse {
                                 }
 
                                 else -> {
-                                    println("unknown EDNS")
                                     val data = RDATA.copyOfRange(ePos, ePos + OPTION_LENGTH)
                                     ePos += OPTION_LENGTH
 
@@ -386,7 +384,6 @@ class Parse {
                             }
                         }
                         message.addAdditional(edns)
-                        println("add EDNS record")
                     }
                 }
             }
