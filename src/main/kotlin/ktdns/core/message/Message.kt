@@ -1,5 +1,8 @@
 package ktdns.core.message
 
+import ktdns.core.message.record.EDNSRecord
+import ktdns.core.message.record.NSRecord
+import ktdns.core.message.record.Record
 import ktdns.extend.BytesNumber
 import java.net.DatagramSocket
 import java.net.InetAddress
@@ -14,7 +17,7 @@ class Message : Cloneable {
     val answers = ArrayList<Record>()
     private var CNAMEPos = -1
 
-    val nsRecords = ArrayList<Record.NSRecord>()
+    val nsRecords = ArrayList<NSRecord>()
 
     val additional = ArrayList<Record>()
 
@@ -56,12 +59,12 @@ class Message : Cloneable {
 
                         Record.RecordType.EDNS -> {
 
-                            it as Record.EDNSRecord
+                            it as EDNSRecord
                             it.optionDatas.forEach {
                                 when {
-                                    Record.EDNSRecord.ECS_DATA::class.java.isInstance(it) -> {
+                                    EDNSRecord.ECS_DATA::class.java.isInstance(it) -> {
                                         if (header.QR == 1) {
-                                            it as Record.EDNSRecord.ECS_DATA
+                                            it as EDNSRecord.ECS_DATA
                                             it.scopeNetMask = it.sourceNetMask
                                         }
                                     }
@@ -105,7 +108,7 @@ class Message : Cloneable {
         return this
     }
 
-    fun addNSRecord(nsRecord: Record.NSRecord): Message {
+    fun addNSRecord(nsRecord: NSRecord): Message {
         header.NSCOUNT++
         nsRecords.add(nsRecord)
         return this

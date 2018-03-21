@@ -2,7 +2,10 @@ package ktdns.core.parse
 
 import ktdns.KtdnsException
 import ktdns.core.message.Message
-import ktdns.core.message.Record
+import ktdns.core.message.record.AAAARecord
+import ktdns.core.message.record.ARecord
+import ktdns.core.message.record.CNAMERecord
+import ktdns.core.message.record.EDNSRecord
 import ktdns.extend.BytesNumber
 import ktdns.extend.toUInt
 import java.net.DatagramSocket
@@ -270,17 +273,17 @@ class Parse {
                 val answer = when (type) {
                     5 -> {
                         val cname = getName(newPos, buf).name
-                        Record.CNAMEAnswer(name, `class`, ttl, cname)
+                        CNAMERecord(name, `class`, ttl, cname)
                     }
 
                     1 -> {
                         val address = InetAddress.getByAddress(buf.copyOfRange(newPos, newPos + 4))
-                        Record.AAnswer(name, `class`, ttl, address)
+                        ARecord(name, `class`, ttl, address)
                     }
 
                     28 -> {
                         val address = InetAddress.getByAddress(buf.copyOfRange(newPos, newPos + 16))
-                        Record.AAAAAnswer(name, `class`, ttl, address)
+                        AAAARecord(name, `class`, ttl, address)
                     }
 
                     else -> TODO("other not implement answer type: $type")
@@ -319,7 +322,7 @@ class Parse {
                         val RDLENGTH = (BytesNumber.getShort(noHeaderBuf.copyOfRange(pos, pos + 2))).toInt()
                         pos += 2
 
-                        val edns = Record.EDNSRecord(CLASS, EXTENDED_RCODE, EDNS_VERSION, Z)
+                        val edns = EDNSRecord(CLASS, EXTENDED_RCODE, EDNS_VERSION, Z)
 
                         if (RDLENGTH == 0) {
                             message.addAdditional(edns)
@@ -366,7 +369,7 @@ class Parse {
 
                                     ePos += OPTION_LENGTH - 4
 
-                                    val ecsData = Record.EDNSRecord.ECS_DATA(
+                                    val ecsData = EDNSRecord.ECS_DATA(
                                             InetAddress.getByAddress(ipByteArray),
                                             sourceNetMask,
                                             scpoeNetMask
@@ -378,7 +381,7 @@ class Parse {
                                     val data = RDATA.copyOfRange(ePos, ePos + OPTION_LENGTH)
                                     ePos += OPTION_LENGTH
 
-                                    val unknownData = Record.EDNSRecord.UnknownData(OPTION_CODE, data)
+                                    val unknownData = EDNSRecord.UnknownData(OPTION_CODE, data)
                                     edns.addOptionData(unknownData)
                                 }
                             }
