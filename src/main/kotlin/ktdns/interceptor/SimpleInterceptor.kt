@@ -14,13 +14,13 @@ class SimpleInterceptor : Interceptor {
         val queryPacket = DatagramPacket(queryBuf, queryBuf.size, nameserverAddress)
         nameserver.send(queryPacket)
 
-        val answerBuf = ByteArray(512)
+        val answerBuf = ByteArray(4096)
 
         val answerPacket = DatagramPacket(answerBuf, answerBuf.size, nameserverAddress)
 
         nameserver.receive(answerPacket)
 
-        val answerMessage = Parse.parseAnswer(answerBuf)
+        val answerMessage = Parse.parseAnswer(answerBuf.copyOfRange(0, answerPacket.length))
         answerMessage.answers.forEach {
             queryMessage.addAnswer(it)
         }

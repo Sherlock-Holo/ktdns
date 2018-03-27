@@ -1,5 +1,6 @@
 package ktdns.core.message
 
+import ktdns.core.message.record.CNAMERecord
 import ktdns.core.message.record.EDNSRecord
 import ktdns.core.message.record.NSRecord
 import ktdns.core.message.record.Record
@@ -8,9 +9,12 @@ import java.net.DatagramSocket
 import java.net.InetAddress
 import java.nio.ByteBuffer
 import java.util.*
+import kotlin.collections.HashMap
 
 class Message : Cloneable {
     var header = Header()
+
+    private val stringMap = HashMap<String, Int>()
 
     val questions = ArrayList<Question>()
 
@@ -29,28 +33,38 @@ class Message : Cloneable {
         get() {
 
             val arrayList = ArrayList<Byte>()
-            var offset = 12
+//            var offset = 12
+
+            this.header.QDCOUNT = questions.size
+            this.header.ANCOUNT = answers.size
+            this.header.NSCOUNT = nsRecords.size
+            this.header.ARCOUNT = additional.size
 
             /** header **/
             arrayList.addAll(header.byteArray.toTypedArray())
 
             /** questions **/
             questions.forEach {
+                if (stringMap[it.QNAME] == null) {
+                    stringMap[it.QNAME] = arrayList.size
+                }
+
                 arrayList.addAll(it.byteArray.toTypedArray())
             }
 
             /** answers **/
-            if (CNAMEPos != -1) {
-                val cnameAnswer = answers.removeAt(CNAMEPos)
-                arrayList.addAll(cnameAnswer.toByteArray(12).toTypedArray())
+            answers.forEach {
+                arrayList.addAll(it.toByteArray(stringMap[it.NAME]).toTypedArray())
 
-                offset = arrayList.size - cnameAnswer.RDLENGTH
+                when (it.TYPE) {
+                    Record.RecordType.CNAME -> {
+                        stringMap[(it as CNAMERecord).cname] = arrayList.size - it.RDLENGTH
+                    }
+                }
             }
 
-            answers.forEach { arrayList.addAll(it.toByteArray(offset).toTypedArray()) }
-
             /** nsRecords **/
-            nsRecords.forEach { arrayList.addAll(it.toByteArray(offset).toTypedArray()) }
+            nsRecords.forEach { arrayList.addAll(it.toByteArray(stringMap[it.NAME]).toTypedArray()) }
 
             /** additional **/
             additional.forEach {
@@ -85,10 +99,10 @@ class Message : Cloneable {
     fun setAnswerMessage(boolean: Boolean) {
         if (boolean) {
             this.header.QR = 1
-            this.header.QDCOUNT = questions.size
+            /*this.header.QDCOUNT = questions.size
             this.header.ANCOUNT = answers.size
             this.header.NSCOUNT = nsRecords.size
-            this.header.ARCOUNT = additional.size
+            this.header.ARCOUNT = additional.size*/
         } else this.header.QR = 0
     }
 

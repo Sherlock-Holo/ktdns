@@ -26,6 +26,7 @@ class Server(private val chain: AbstractChain) {
 
     var bindAddress: InetSocketAddress? = null
         set(value) {
+            field = value
             socket = DatagramSocket(value)
         }
 
@@ -46,15 +47,15 @@ class Server(private val chain: AbstractChain) {
             }
 
             threadPool.submit {
-                val message = Parse.parseQuery(buf.copyOf(packet.length), socket, packet.address, packet.port)
-                val chain = this.chain.clone() as AbstractChain
-                interceptors.forEach { chain.addInterceptor(it) }
-
-                val outBuf = chain.proceed(message).apply { this.setAnswerMessage(true) }.byteArray
-
-                val outPacket = DatagramPacket(outBuf, outBuf.size, message.souceAddress, message.sourcePort)
-                val socket = message.socket
                 try {
+                    val message = Parse.parseQuery(buf.copyOf(packet.length), socket, packet.address, packet.port)
+                    val chain = this.chain.clone() as AbstractChain
+                    interceptors.forEach { chain.addInterceptor(it) }
+
+                    val outBuf = chain.proceed(message).apply { this.setAnswerMessage(true) }.byteArray
+
+                    val outPacket = DatagramPacket(outBuf, outBuf.size, message.souceAddress, message.sourcePort)
+                    val socket = message.socket
                     socket.send(outPacket)
                 } finally {
                 }
