@@ -88,7 +88,7 @@ class Message : Cloneable {
                             arrayList.addAll(it.toByteArray(null).toTypedArray())
                         }
 
-                        else -> TODO("other additional record")
+//                        else -> TODO("other additional record")
                     }
                 }
             }
@@ -99,10 +99,7 @@ class Message : Cloneable {
     fun setAnswerMessage(boolean: Boolean) {
         if (boolean) {
             this.header.QR = 1
-            /*this.header.QDCOUNT = questions.size
-            this.header.ANCOUNT = answers.size
-            this.header.NSCOUNT = nsRecords.size
-            this.header.ARCOUNT = additional.size*/
+            
         } else this.header.QR = 0
     }
 

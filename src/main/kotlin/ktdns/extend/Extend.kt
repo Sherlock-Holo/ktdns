@@ -1,5 +1,6 @@
 package ktdns.extend
 
+import ktdns.KtdnsException
 import java.nio.ByteBuffer
 
 fun Byte.toUInt() = this.toInt() and 0xff
@@ -59,7 +60,7 @@ class BytesNumber {
                     return longBuffer.long
                 }
 
-                else -> TODO("not yet support byteArray size: ${byteArray.size}")
+                else -> throw KtdnsException("not yet support byteArray size: ${byteArray.size}")
             }
         }
 

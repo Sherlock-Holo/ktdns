@@ -286,7 +286,7 @@ class Parse {
                         AAAARecord(name, `class`, ttl, address)
                     }
 
-                    else -> TODO("other not implement answer type: $type")
+                    else -> throw KtdnsException("other not implement answer type: $type")
                 }
 
                 newPos += rdlength
