@@ -10,7 +10,7 @@ buildscript {
 }
 
 group 'SpiceAndWolf'
-version '0.2.1-alpha'
+version '0.2.3-alpha'
 
 apply plugin: 'java'
 //apply plugin: 'java-library'

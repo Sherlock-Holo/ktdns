@@ -2,10 +2,7 @@ package ktdns.core.parse
 
 import ktdns.KtdnsException
 import ktdns.core.message.Message
-import ktdns.core.message.record.AAAARecord
-import ktdns.core.message.record.ARecord
-import ktdns.core.message.record.CNAMERecord
-import ktdns.core.message.record.EDNSRecord
+import ktdns.core.message.record.*
 import ktdns.extend.BytesNumber
 import ktdns.extend.toUInt
 import java.net.DatagramSocket
@@ -133,6 +130,7 @@ class Parse {
 
             var messageInfo = MessageInfo(buf, newPos, message)
             messageInfo = parseAN(messageInfo)
+            messageInfo = parseAU(messageInfo)
             parseAR(messageInfo)
 
             return message
@@ -199,7 +197,7 @@ class Parse {
 
             ## QDCOUNT: 无符号16bit整数表示报文请求段中的问题记录数
             ## ANCOUNT: 无符号16bit整数表示报文回答段中的回答记录数
-            ## NSCOUNT: 无符号16bit整数表示报文授权段中的授权记录数
+            ## AUCOUNT: 无符号16bit整数表示报文授权段中的授权记录数
             ## ARCOUNT: 无符号16bit整数表示报文附加段中的附加记录数
 
             0  1  2  3  4  5  6  7  0  1  2  3  4  5  6  7
@@ -212,7 +210,7 @@ class Parse {
             +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
             |                    ANCOUNT                    |
             +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-            |                    NSCOUNT                    |
+            |                    AUCOUNT                    |
             +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
             |                    ARCOUNT                    |
             +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
@@ -248,7 +246,7 @@ class Parse {
             header.RCODE = RCODE
             header.QDCOUNT = QDCOUNT
             header.ANCOUNT = ANCOUNT
-            header.NSCOUNT = NSCOUNT
+            header.AUCOUNT = NSCOUNT
             header.ARCOUNT = ARCOUNT
 
             return message
@@ -296,6 +294,67 @@ class Parse {
             return MessageInfo(buf, newPos, message)
         }
 
+        private fun parseAU(messageInfo: MessageInfo): MessageInfo {
+            val message = messageInfo.message
+            var pos = messageInfo.pos
+            val buf = messageInfo.buf
+
+            repeat(message.header.AUCOUNT - 1) {
+                val nameAndLength = getName(pos, buf)
+                val name = nameAndLength.name
+                pos += nameAndLength.length
+                val type = BytesNumber.getShort(buf.copyOfRange(pos, pos + 2)).toInt()
+                val `class` = (BytesNumber.getShort(buf.copyOfRange(pos + 2, pos + 4))).toInt()
+                val ttl = BytesNumber.getInt(buf.copyOfRange(pos + 4, pos + 8))
+                val rdlength = BytesNumber.getShort(buf.copyOfRange(pos + 8, pos + 10)).toInt()
+
+                pos += 2 + 2 + 4 + 2
+
+                val authRecord = when (type) {
+                    2 -> {
+                        val nsdnameAndLength = getName(pos, buf)
+
+                        NSRecord(name, `class`, ttl, nsdnameAndLength.name)
+                    }
+
+                    6 -> {
+                        val mnameAndLength = getName(pos, buf)
+                        val mname = mnameAndLength.name
+                        pos += mnameAndLength.length
+
+                        val rnameAndLength = getName(pos, buf)
+                        val rname = rnameAndLength.name
+                        pos += rnameAndLength.length
+
+                        val serial = BytesNumber.getInt(buf.copyOfRange(pos, pos + 4))
+                        pos += 4
+
+                        val refresh = BytesNumber.getInt(buf.copyOfRange(pos, pos + 4))
+                        pos += 4
+
+                        val retry = BytesNumber.getInt(buf.copyOfRange(pos, pos + 4))
+                        pos += 4
+
+                        val expire = BytesNumber.getInt(buf.copyOfRange(pos, pos + 4))
+                        pos += 4
+
+                        val minimum = BytesNumber.getInt(buf.copyOfRange(pos, pos + 4))
+                        pos += 4
+
+                        SOARecord(mname, rname, serial, refresh, retry, expire, minimum, name, `class`, ttl)
+                    }
+
+                    else -> TODO("not implement authRecord")
+                }
+
+                pos += rdlength
+
+                message.addAURecord(authRecord)
+            }
+
+            return MessageInfo(buf, pos, message)
+        }
+
         private fun parseAR(messageInfo: MessageInfo): MessageInfo {
             val message = messageInfo.message
             var pos = messageInfo.pos
@@ -325,7 +384,7 @@ class Parse {
                         val edns = EDNSRecord(CLASS, EXTENDED_RCODE, EDNS_VERSION, Z)
 
                         if (RDLENGTH == 0) {
-                            message.addAdditional(edns)
+                            message.addAdditionalRecord(edns)
                             continue@loop
                         }
 
@@ -386,7 +445,7 @@ class Parse {
                                 }
                             }
                         }
-                        message.addAdditional(edns)
+                        message.addAdditionalRecord(edns)
                     }
                 }
             }

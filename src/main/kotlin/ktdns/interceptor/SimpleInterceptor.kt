@@ -21,9 +21,6 @@ class SimpleInterceptor : Interceptor {
         nameserver.receive(answerPacket)
 
         val answerMessage = Parse.parseAnswer(answerBuf.copyOfRange(0, answerPacket.length))
-        /*answerMessage.answers.forEach {
-            queryMessage.addAnswer(it)
-        }*/
 
         return chain.proceed(answerMessage)
     }

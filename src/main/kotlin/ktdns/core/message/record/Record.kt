@@ -6,8 +6,9 @@ abstract class Record {
     enum class RecordType(val type: Int) {
         A(1),
         NS(2),
-        AAAA(28),
         CNAME(5),
+        SOA(6),
+        AAAA(28),
         EDNS(41)
     }
 

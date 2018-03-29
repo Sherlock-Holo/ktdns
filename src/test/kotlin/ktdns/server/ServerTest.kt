@@ -1,26 +1,25 @@
 package ktdns.server
 
 import ktdns.core.message.Message
-import ktdns.core.message.record.AAAARecord
-import ktdns.core.message.record.ARecord
-import ktdns.core.message.record.CNAMERecord
 import ktdns.core.message.record.NSRecord
+import ktdns.core.message.record.SOARecord
 import ktdns.interceptor.Interceptor
 import ktdns.interceptor.chain.Chain
-import java.net.InetAddress
 import java.net.InetSocketAddress
 
 fun main(args: Array<String>) {
     val server = Server()
     server.bindAddress = InetSocketAddress(5454)
     server
-            .addInterceptor(CNAMEInterceptor())
-            .addInterceptor(AInterceptor())
-            .addInterceptor(AAAAInterceptor())
+//            .addInterceptor(CNAMEInterceptor())
+//            .addInterceptor(AInterceptor())
+//            .addInterceptor(AAAAInterceptor())
 //            .addInterceptor(EDNSInterceptor())
             .addInterceptor(NSIntercetpor())
+            .addInterceptor(SOAInterceptor())
     server.start()
 }
+/*
 
 class CNAMEInterceptor : Interceptor {
     override fun intercept(chain: Chain): Message {
@@ -51,7 +50,7 @@ class AAAAInterceptor : Interceptor {
 class NSIntercetpor : Interceptor {
     override fun intercept(chain: Chain): Message {
         val message = chain.message
-        message.addNSRecord(NSRecord("www.qq.com.", 1, 64, "ns.sherlock.com."))
+        message.addAURecord(NSRecord("www.qq.com.", 1, 64, "ns.sherlock.com."))
         return chain.proceed(message)
     }
 }
@@ -60,5 +59,32 @@ class NSIntercetpor : Interceptor {
 class EDNSInterceptor : Interceptor {
     override fun intercept(chain: Chain): Message {
         return chain.proceed(chain.message.apply { this.header.ARCOUNT = 1 })
+    }
+}*/
+
+class SOAInterceptor : Interceptor {
+    override fun intercept(chain: Chain): Message {
+        val message = chain.message
+        message.addAURecord(SOARecord(
+                "ns1.a.shifen.com.",
+                "baidu_dns_master.baidu.com.",
+                1803290016,
+                5,
+                5,
+                2592000,
+                3600,
+                "www.baidu.com.",
+                64
+        ))
+
+        return chain.proceed(message)
+    }
+}
+
+class NSIntercetpor : Interceptor {
+    override fun intercept(chain: Chain): Message {
+        val message = chain.message
+        message.addAURecord(NSRecord("www.baidu.com.", 1, 64, "ns.sherlock.com."))
+        return chain.proceed(message)
     }
 }

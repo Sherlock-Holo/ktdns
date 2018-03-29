@@ -2,7 +2,6 @@ package ktdns.core.message
 
 import ktdns.core.message.record.CNAMERecord
 import ktdns.core.message.record.EDNSRecord
-import ktdns.core.message.record.NSRecord
 import ktdns.core.message.record.Record
 import ktdns.extend.BytesNumber
 import java.net.DatagramSocket
@@ -21,7 +20,7 @@ class Message : Cloneable {
     val answers = ArrayList<Record>()
     private var CNAMEPos = -1
 
-    val nsRecords = ArrayList<NSRecord>()
+    val authRecords = ArrayList<Record>()
 
     val additional = ArrayList<Record>()
 
@@ -33,11 +32,10 @@ class Message : Cloneable {
         get() {
 
             val arrayList = ArrayList<Byte>()
-//            var offset = 12
 
             this.header.QDCOUNT = questions.size
             this.header.ANCOUNT = answers.size
-            this.header.NSCOUNT = nsRecords.size
+            this.header.AUCOUNT = authRecords.size
             this.header.ARCOUNT = additional.size
 
             /** header **/
@@ -58,13 +56,13 @@ class Message : Cloneable {
 
                 when (it.TYPE) {
                     Record.RecordType.CNAME -> {
-                        stringMap[(it as CNAMERecord).cname] = arrayList.size - it.RDLENGTH
+                        if (stringMap[(it as CNAMERecord).cname] == null) stringMap[it.cname] = arrayList.size - it.RDLENGTH
                     }
                 }
             }
 
-            /** nsRecords **/
-            nsRecords.forEach { arrayList.addAll(it.toByteArray(stringMap[it.NAME]).toTypedArray()) }
+            /** authRecords **/
+            authRecords.forEach { arrayList.addAll(it.toByteArray(stringMap[it.NAME]).toTypedArray()) }
 
             /** additional **/
             additional.forEach {
@@ -99,7 +97,7 @@ class Message : Cloneable {
     fun setAnswerMessage(boolean: Boolean) {
         if (boolean) {
             this.header.QR = 1
-            
+
         } else this.header.QR = 0
     }
 
@@ -119,13 +117,13 @@ class Message : Cloneable {
         return this
     }
 
-    fun addNSRecord(nsRecord: NSRecord): Message {
-        header.NSCOUNT++
-        nsRecords.add(nsRecord)
+    fun addAURecord(record: Record): Message {
+        header.AUCOUNT++
+        authRecords.add(record)
         return this
     }
 
-    fun addAdditional(record: Record): Message {
+    fun addAdditionalRecord(record: Record): Message {
         header.ARCOUNT++
         additional.add(record)
         return this
@@ -176,20 +174,20 @@ class Message : Cloneable {
 
         var QDCOUNT = -1
         var ANCOUNT = -1
-        var NSCOUNT = -1
+        var AUCOUNT = -1
         var ARCOUNT = -1
 
         val counts: ByteArray
             get() {
                 check(QDCOUNT != -1)
                 check(ANCOUNT != -1)
-                check(NSCOUNT != -1)
+                check(AUCOUNT != -1)
                 check(ARCOUNT != -1)
 
                 val buf = ByteBuffer.allocate(8)
                 buf.putShort(QDCOUNT.toShort())
                 buf.putShort(ANCOUNT.toShort())
-                buf.putShort(NSCOUNT.toShort())
+                buf.putShort(AUCOUNT.toShort())
                 buf.putShort(ARCOUNT.toShort())
 
                 return buf.array()
@@ -208,7 +206,7 @@ class Message : Cloneable {
         /**
         ## QDCOUNT: 无符号16bit整数表示报文请求段中的问题记录数
         ## ANCOUNT: 无符号16bit整数表示报文回答段中的回答记录数
-        ## NSCOUNT: 无符号16bit整数表示报文授权段中的授权记录数
+        ## AUCOUNT: 无符号16bit整数表示报文授权段中的授权记录数
         ## ARCOUNT: 无符号16bit整数表示报文附加段中的附加记录数
          */
     }
@@ -274,7 +272,7 @@ class Message : Cloneable {
             header.RCODE = 0
             header.QDCOUNT = 0
             header.ANCOUNT = 0
-            header.NSCOUNT = 0
+            header.AUCOUNT = 0
             header.ARCOUNT = 0
 
             message.addQuestion(question)
